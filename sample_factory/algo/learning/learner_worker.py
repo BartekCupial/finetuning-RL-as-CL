@@ -50,6 +50,7 @@ def init_learner_process(sf_context: SampleFactoryContext, learner_worker: Learn
 class LearnerWorker(HeartbeatStoppableEventLoopObject, Configurable):
     def __init__(
         self,
+        larner_cls: type,
         evt_loop: EventLoop,
         cfg: Config,
         env_info: EnvInfo,
@@ -67,7 +68,7 @@ class LearnerWorker(HeartbeatStoppableEventLoopObject, Configurable):
 
         policy_versions_tensor: Tensor = buffer_mgr.policy_versions
         self.param_server = ParameterServer(policy_id, policy_versions_tensor, cfg.serial_mode)
-        self.learner: Learner = Learner(cfg, env_info, policy_versions_tensor, policy_id, self.param_server)
+        self.learner: Learner = larner_cls(cfg, env_info, policy_versions_tensor, policy_id, self.param_server)
 
         # total number of full training iterations (potentially multiple minibatches/epochs per iteration)
         self.training_iteration_since_resume: int = 0

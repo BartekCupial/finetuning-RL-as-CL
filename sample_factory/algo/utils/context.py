@@ -8,6 +8,8 @@ class SampleFactoryContext:
     def __init__(self):
         self.env_registry = dict()
         self.model_factory = ModelFactory()
+        from sample_factory.algo.learning.learner import Learner
+        self.learner_cls = Learner
 
 
 GLOBAL_CONTEXT = None
@@ -44,3 +46,11 @@ def global_model_factory() -> ModelFactory:
     :rtype: ModelFactory
     """
     return sf_global_context().model_factory
+
+
+def global_learner_cls() -> type:
+    """
+    :return: global learner class
+    :rtype: type
+    """
+    return sf_global_context().learner_cls

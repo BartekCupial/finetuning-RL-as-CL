@@ -523,7 +523,10 @@ class Runner(EventLoopObject, Configurable):
         return Batcher(event_loop, policy_id, self.buffer_mgr, self.cfg, self.env_info)
 
     def _make_learner(self, event_loop, policy_id: PolicyID, batcher: Batcher):
+        from sample_factory.algo.utils.context import global_learner_cls
+        learner_cls = global_learner_cls()
         return LearnerWorker(
+            learner_cls,
             event_loop,
             self.cfg,
             self.env_info,
