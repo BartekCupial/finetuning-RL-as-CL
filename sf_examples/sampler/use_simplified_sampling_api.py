@@ -7,6 +7,7 @@ from signal_slot.signal_slot import StatusCode
 
 from sample_factory.algo.sampling.simplified_sampling_api import SyncSamplingAPI
 from sample_factory.algo.utils.env_info import EnvInfo, obtain_env_info_in_a_separate_process
+from sample_factory.algo.utils.actor_critic_info import ActorCriticInfo, obtain_ac_info_in_a_separate_process
 from sample_factory.algo.utils.rl_utils import samples_per_trajectory
 from sample_factory.utils.typing import Config
 from sample_factory.utils.utils import log
@@ -23,8 +24,8 @@ def _print_fps_stats(cfg: Config, fps_stats: Deque):
     log.debug(f"Samples collected: {sampled}, throughput: {fps:.1f} FPS{fps_frameskip_str}")
 
 
-def generate_trajectories(cfg: Config, env_info: EnvInfo, sample_env_steps: int = 1_000_000) -> StatusCode:
-    sampler = SyncSamplingAPI(cfg, env_info)
+def generate_trajectories(cfg: Config, env_info: EnvInfo, actor_critic_info: ActorCriticInfo, sample_env_steps: int = 1_000_000) -> StatusCode:
+    sampler = SyncSamplingAPI(cfg, env_info, actor_critic_info)
     sampler.start()
 
     print_interval_sec = 1.0
@@ -56,7 +57,8 @@ def main() -> StatusCode:
     register_atari_components()
     cfg = parse_atari_args()
     env_info = obtain_env_info_in_a_separate_process(cfg)
-    return generate_trajectories(cfg, env_info)
+    actor_critic_info = obtain_ac_info_in_a_separate_process(cfg, env_info)
+    return generate_trajectories(cfg, env_info, actor_critic_info)
 
 
 if __name__ == "__main__":

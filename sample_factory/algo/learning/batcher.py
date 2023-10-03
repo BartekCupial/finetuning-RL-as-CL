@@ -5,6 +5,7 @@ import torch
 from signal_slot.signal_slot import EventLoop, signal
 
 from sample_factory.algo.utils.env_info import EnvInfo
+from sample_factory.algo.utils.actor_critic_info import ActorCriticInfo
 from sample_factory.algo.utils.heartbeat import HeartbeatStoppableEventLoopObject
 from sample_factory.algo.utils.shared_buffers import BufferMgr, alloc_trajectory_tensors, policy_device
 from sample_factory.algo.utils.tensor_dict import TensorDict
@@ -88,7 +89,13 @@ class SliceMerger:
 
 class Batcher(HeartbeatStoppableEventLoopObject):
     def __init__(
-        self, evt_loop: EventLoop, policy_id: PolicyID, buffer_mgr: BufferMgr, cfg: AttrDict, env_info: EnvInfo
+        self,
+        evt_loop: EventLoop,
+        policy_id: PolicyID,
+        buffer_mgr: BufferMgr,
+        cfg: AttrDict,
+        env_info: EnvInfo,
+        actor_critic_info: ActorCriticInfo,
     ):
         unique_name = f"{Batcher.__name__}_{policy_id}"
         super().__init__(evt_loop, unique_name, cfg.heartbeat_interval)
@@ -97,6 +104,7 @@ class Batcher(HeartbeatStoppableEventLoopObject):
 
         self.cfg = cfg
         self.env_info: EnvInfo = env_info
+        self.actor_critic_info: ActorCriticInfo = actor_critic_info
         self.policy_id = policy_id
 
         self.training_iteration: int = 0
@@ -151,6 +159,7 @@ class Batcher(HeartbeatStoppableEventLoopObject):
             rnn_size = get_rnn_size(self.cfg)
             training_batch = alloc_trajectory_tensors(
                 self.env_info,
+                self.actor_critic_info,
                 self.traj_per_training_iteration,
                 self.cfg.rollout,
                 rnn_size,

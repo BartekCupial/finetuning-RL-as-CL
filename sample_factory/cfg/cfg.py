@@ -498,6 +498,7 @@ def add_model_args(p: ArgumentParser):
     settings for one or the other. If we're using MLP encoder, conv encoder settings will be ignored.
     """
     # policy with vector observations - encoder options
+    p.add_argument("--use_actor_critic_info_cache", default=False, type=str2bool, help="Whether to use cached actor critic info")
     p.add_argument(
         "--encoder_mlp_layers",
         default=[512, 512],

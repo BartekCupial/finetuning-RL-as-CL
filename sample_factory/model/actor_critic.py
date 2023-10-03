@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Tuple
 
 import torch
 from torch import Tensor, nn
@@ -125,6 +125,17 @@ class ActorCritic(nn.Module, Configurable):
 
     def forward(self, normalized_obs_dict, rnn_states, values_only: bool = False) -> TensorDict:
         raise NotImplementedError()
+    
+    def policy_output_shapes(self, num_actions, num_action_distribution_parameters) -> List[Tuple[str, List]]:
+        # policy outputs, this matches the expected output of the actor-critic
+        policy_outputs = [
+            ("actions", [num_actions]),
+            ("action_logits", [num_action_distribution_parameters]),
+            ("log_prob_actions", []),
+            ("values", []),
+            ("policy_version", []),
+        ]
+        return policy_outputs
 
 
 class ActorCriticSharedWeights(ActorCritic):
