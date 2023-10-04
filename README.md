@@ -77,6 +77,20 @@ Just install from PyPI:
 SF is known to work on Linux and macOS. There is no Windows support at this time.
 Please refer to the [documentation](https://samplefactory.dev) for additional environment-specific installation notes.
 
+### To install with nethack extras
+
+Install NLE dependent packages and cmake
+```
+apt-get install -yq autoconf libtool pkg-config libbz2-dev
+conda install cmake
+pip install -e sf_examples/nethack/render_utils
+pip install .[nethack]
+``` 
+or if you want to develop 
+```
+pip install -e .[dev,nethack,mrunner]
+``` 
+
 ## Quickstart
 
 Use command line to train an agent using one of the existing integrations, e.g. Mujoco (might need to run `pip install sample-factory[mujoco]`):

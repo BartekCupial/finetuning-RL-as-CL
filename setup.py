@@ -15,6 +15,17 @@ with open("README.md", "r") as f:
 _atari_deps = ["gymnasium[atari, accept-rom-license]"]
 _mujoco_deps = ["gymnasium[mujoco]", "mujoco<=2.3.3"]
 _envpool_deps = ["envpool"]
+_nethack_deps = [
+    "numba ~= 0.58",
+    "pandas ~= 2.1",
+    "matplotlib ~= 3.8",
+    "seaborn ~= 0.12",
+    "scipy ~= 1.11",
+    "shimmy",
+    "tqdm ~= 4.66",
+    "debugpy ~= 1.6",
+    "nle @ git+https://github.com/BartekCupial/nle.git",
+]
 
 _docs_deps = [
     "mkdocs-material",
@@ -68,6 +79,8 @@ setup(
         "mujoco": _mujoco_deps,
         "vizdoom": ["vizdoom<2.0", "gymnasium[classic_control]"],
         # "dmlab": ["dm_env"],  <-- these are just auxiliary packages, the main package has to be built from sources
+        "nethack": _nethack_deps,
+        "mrunner": ["mrunner @ git+https://gitlab.com/awarelab/mrunner.git"],
     },
     package_dir={"": "./"},
     packages=setuptools.find_packages(where="./", include=["sample_factory*", "sf_examples*"]),
