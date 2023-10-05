@@ -30,6 +30,8 @@ config = {
 params_grid = [
     {
         "seed": list(range(5)),
+        "use_pretrained_checkpoint": [True],
+        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/@-AA-BC/pretrained"],
     },
 ]
 

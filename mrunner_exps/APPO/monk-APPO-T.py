@@ -6,11 +6,11 @@ name = globals()["script"][:-3]
 config = {
     "env": "challenge",
     "exp_tags": [name],
-    "exp_point": "monk-APPO-KS",
+    "exp_point": "monk-APPO",
     "train_for_env_steps": 2_000_000_000,
-    "group": "monk-APPO-KS",
+    "group": "monk-APPO",
     "character": "mon-hum-neu-mal",
-    "num_workers": 32,
+    "num_workers": 36,
     "num_envs_per_worker": 30,
     "worker_num_splits": 2,
     "rollout": 32,
@@ -21,15 +21,14 @@ config = {
     "wandb_project": "sf2_nethack",
     "wandb_group": "gmum",
     "with_wandb": True,
-    "kickstarting_loss_coeff": 0.2,
-    "teacher_path": "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/@-AA-BC/pretrained",
-    "run_teacher_hs": False,
 }
 
 # params different between exps
 params_grid = [
     {
         "seed": list(range(5)),
+        "use_pretrained_checkpoint": [True],
+        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/@-AA-BC/pretrained"],
     },
 ]
 

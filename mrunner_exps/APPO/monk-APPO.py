@@ -14,19 +14,19 @@ config = {
     "num_envs_per_worker": 30,
     "worker_num_splits": 2,
     "rollout": 32,
-    "batch_size": 1024,  # this equals bs = 128, 128 * 32 = 4096
+    "batch_size": 4096,  # this equals bs = 128, 128 * 32 = 4096
     "async_rl": True,
     "serial_mode": False,
     "wandb_user": "bartekcupial",
     "wandb_project": "sf2_nethack",
     "wandb_group": "gmum",
-    "with_wandb": False,
+    "with_wandb": True,
 }
 
 # params different between exps
 params_grid = [
     {
-        "seed": list(range(1)),
+        "seed": list(range(5)),
     },
 ]
 

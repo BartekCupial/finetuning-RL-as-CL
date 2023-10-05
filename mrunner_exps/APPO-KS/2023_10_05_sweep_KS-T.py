@@ -29,7 +29,18 @@ config = {
 # params different between exps
 params_grid = [
     {
-        "seed": list(range(5)),
+        "seed": list(range(3)),
+        "kickstarting_loss_coeff": [0.2, 0.1, 0.05, 0.01, 0.005],
+        "use_pretrained_checkpoint": [True],
+        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/@-AA-BC/pretrained"],
+        "teacher_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/@-AA-BC/pretrained"],
+    },
+    {
+        "seed": list(range(3)),
+        "kickstarting_loss_coeff": [0.2, 0.1, 0.05, 0.01, 0.005],
+        "use_pretrained_checkpoint": [True],
+        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/monk-AA-BC/pretrained"],
+        "teacher_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/monk-AA-BC/pretrained"],
     },
 ]
 
