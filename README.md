@@ -83,6 +83,7 @@ Install NLE dependent packages and cmake
 ```
 apt-get install -yq autoconf libtool pkg-config libbz2-dev
 conda install cmake
+conda install -yq pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 pip install -e sf_examples/nethack/render_utils
 pip install .[nethack]
 ``` 
