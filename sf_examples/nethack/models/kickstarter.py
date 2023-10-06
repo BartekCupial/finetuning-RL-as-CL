@@ -1,8 +1,10 @@
-from typing import Dict, List, Tuple
+from typing import Dict, Iterator, List, Optional, Set, Tuple
 
 import torch
 import torch.nn as nn
 from torch import Tensor
+from torch.nn.modules.module import Module
+from torch.nn.parameter import Parameter
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from sample_factory.algo.utils.tensor_dict import TensorDict
@@ -23,6 +25,12 @@ class KickStarter(nn.Module):
 
         self.action_space = self.student.action_space
         self.returns_normalizer = self.student.returns_normalizer
+
+    def named_modules(self, memo: Set[Module] | None = None, prefix: str = "", remove_duplicate: bool = True):
+        # we override only named_modules, since named_buffers, named_parameters and parameters are dependent
+        # returning only student parameters will speed up the training when using kickstarting
+        # since optimizer will not have to keep track of teacher paramterers
+        return self.student.named_modules(memo, prefix, remove_duplicate)
 
     def get_action_parameterization(self, decoder_output_size: int):
         self.student.get_action_parameterization(decoder_output_size)
