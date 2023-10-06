@@ -33,7 +33,7 @@ From: nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
     curl -o miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
         chmod +x miniconda.sh && \
         ./miniconda.sh -b -p /opt/conda && \
-        /opt/conda/bin/conda install -y python=3.9 && \
+        /opt/conda/bin/conda install -y python=3.10 && \
         /opt/conda/bin/conda clean -ya
 
 %environment
