@@ -3,6 +3,7 @@ from typing import Dict, List, Tuple
 import torch
 import torch.nn as nn
 from torch import Tensor
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from sample_factory.algo.utils.tensor_dict import TensorDict
 from sample_factory.model.actor_critic import ActorCritic
@@ -14,6 +15,7 @@ class KickStarter(nn.Module):
         self.student = student
         self.teacher = teacher
         self.teacher.eval()
+        self.teacher.requires_grad_(False)
         self._k = "kick_"
         self.always_run_teacher = always_run_teacher
         self.run_teacher_hs = run_teacher_hs
@@ -48,45 +50,60 @@ class KickStarter(nn.Module):
         return self.student.action_distribution()
 
     def _maybe_sample_actions(self, sample_actions: bool, result: TensorDict) -> None:
-        return self.student(sample_actions, result)
+        return self.student._maybe_sample_actions(sample_actions, result)
+
+    def policy_output_shapes(self, num_actions, num_action_distribution_parameters) -> List[Tuple[str, List]]:
+        return self.student.policy_output_shapes(num_actions, num_action_distribution_parameters)
 
     def forward(self, normalized_obs_dict, rnn_states, values_only=False) -> TensorDict:
         rnn_states_split = rnn_states.chunk(self.num_models, dim=1)
-        student_rnn_states, teacher_rnn_states = rnn_states_split[0], rnn_states_split[1]
 
-        if self.run_teacher_hs:
-            student_rnn_states = teacher_rnn_states
+        student_outputs = self.student.forward(normalized_obs_dict, rnn_states_split[0], values_only)
+        teacher_outputs = self.teacher.forward(normalized_obs_dict, rnn_states_split[1], values_only)
 
-        student_outputs = self.student(normalized_obs_dict, student_rnn_states, values_only)
-
-        if self.always_run_teacher or not self.training:
-            with torch.no_grad():
-                teacher_outputs = self.teacher(normalized_obs_dict, teacher_rnn_states, values_only)
-
-            new_rnn_states = [student_outputs["new_rnn_states"], teacher_outputs["new_rnn_states"]]
-            new_rnn_states = torch.cat(new_rnn_states, dim=1)
-            student_outputs["new_rnn_states"] = new_rnn_states
-            if not values_only:
-                student_outputs[self._k + "action_logits"] = teacher_outputs["action_logits"]
+        new_rnn_states = torch.cat([student_outputs["new_rnn_states"], teacher_outputs["new_rnn_states"]], dim=1)
+        student_outputs["new_rnn_states"] = new_rnn_states
 
         return student_outputs
 
     def forward_head(self, normalized_obs_dict: Dict):
-        # this function is only used in learner, to reduce computation we only process student
-        return self.student.forward_head(normalized_obs_dict)
+        student_head_output = self.student.forward_head(normalized_obs_dict)
+        teacher_head_output = self.teacher.forward_head(normalized_obs_dict)
+
+        return torch.cat([student_head_output, teacher_head_output], dim=1)
 
     def forward_core(self, head_output, rnn_states):
-        # in forward_head we process only student head so head output is already good
-        # but we need to chunk rnn_states to process only student rnn_states
-        rnn_states_split = rnn_states.chunk(self.num_models, dim=1)
-        return self.student.forward_core(head_output, rnn_states_split[0])
+        unpacked_head_output, lengths = pad_packed_sequence(head_output)
+        unpacked_head_output_split = unpacked_head_output.chunk(self.num_models, dim=2)
+        student_head_output = pack_padded_sequence(unpacked_head_output_split[0], lengths, enforce_sorted=False)
+        teacher_head_output = pack_padded_sequence(unpacked_head_output_split[1], lengths, enforce_sorted=False)
+
+        student_rnn_states, teacher_rnn_states = rnn_states.chunk(self.num_models, dim=1)
+
+        student_output, student_new_rnn_state = self.student.forward_core(student_head_output, student_rnn_states)
+        teacher_output, teacher_new_rnn_state = self.teacher.forward_core(teacher_head_output, teacher_rnn_states)
+
+        unpacked_student_output, lengths = pad_packed_sequence(student_output)
+        unpacked_teacher_output, lengths = pad_packed_sequence(teacher_output)
+        unpacked_outputs = torch.cat([unpacked_student_output, unpacked_teacher_output], dim=2)
+        outputs = pack_padded_sequence(unpacked_outputs, lengths, enforce_sorted=False)
+
+        new_rnn_states = torch.cat([student_new_rnn_state, teacher_new_rnn_state], dim=1)
+
+        return outputs, new_rnn_states
 
     def forward_tail(self, core_output, values_only: bool, sample_actions: bool) -> TensorDict:
-        # we can pass whole core_output to teacher since we only returned student core_output in forward_core
-        return self.student.forward_tail(core_output, values_only, sample_actions)
+        core_outputs_split = core_output.chunk(self.num_models, dim=1)
 
-    def policy_output_shapes(self, num_actions, num_action_distribution_parameters) -> List[Tuple[str, List]]:
-        # policy outputs, this matches the expected output of the actor-critic
-        policy_outputs = self.student.policy_output_shapes(num_actions, num_action_distribution_parameters)
-        policy_outputs.append((self._k + "action_logits", [num_action_distribution_parameters]))
-        return policy_outputs
+        student_outputs = self.student.forward_tail(core_outputs_split[0], values_only, sample_actions)
+        teacher_outputs = self.teacher.forward_tail(core_outputs_split[1], values_only, sample_actions)
+
+        student_outputs[self._k + "action_logits"] = teacher_outputs["action_logits"]
+
+        return student_outputs
+
+    # def policy_output_shapes(self, num_actions, num_action_distribution_parameters) -> List[Tuple[str, List]]:
+    #     # policy outputs, this matches the expected output of the actor-critic
+    #     policy_outputs = self.student.policy_output_shapes(num_actions, num_action_distribution_parameters)
+    #     policy_outputs.append((self._k + "action_logits", [num_action_distribution_parameters]))
+    #     return policy_outputs

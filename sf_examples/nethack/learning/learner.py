@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from torch import Tensor
 
 from sample_factory.algo.learning.learner import Learner
+from sample_factory.algo.learning.rnn_utils import build_core_out_from_seq, build_rnn_inputs
 from sample_factory.algo.utils.action_distributions import get_action_distribution
 from sample_factory.algo.utils.env_info import EnvInfo
 from sample_factory.algo.utils.model_sharing import ParameterServer
@@ -16,7 +17,7 @@ from sample_factory.algo.utils.tensor_utils import ensure_torch_tensor
 from sample_factory.algo.utils.torch_utils import masked_select, synchronize, to_scalar
 from sample_factory.model.model_utils import get_rnn_size
 from sample_factory.utils.attr_dict import AttrDict
-from sample_factory.utils.typing import Config, InitModelData, PolicyID
+from sample_factory.utils.typing import ActionDistribution, Config, InitModelData, PolicyID
 from sample_factory.utils.utils import log
 from sf_examples.nethack.datasets.dataset import TtyrecDatasetWorker
 
@@ -112,13 +113,10 @@ class NetHackLearner(Learner):
             dataset_mb[key] = torch.concatenate(dataset_mb[key])
 
         # store rnn_states, for next rollout
-        self.dataset_rnn_states[idx] = rnn_states
+        self.dataset_rnn_states[idx] = rnn_states.detach()
         return dataset_mb
 
-    def _kickstarting_loss(self, mb, valids, num_invalids: int):
-        student_logits = mb.action_logits
-        teacher_logits = mb.kick_action_logits
-
+    def _kickstarting_loss(self, student_logits, teacher_logits, valids, num_invalids: int):
         kickstarting_loss = F.kl_div(
             F.log_softmax(student_logits, dim=-1),
             F.log_softmax(teacher_logits, dim=-1),
@@ -126,7 +124,8 @@ class NetHackLearner(Learner):
             reduction="none",
         )
         kickstarting_loss = masked_select(kickstarting_loss, valids, num_invalids)
-        kickstarting_loss = kickstarting_loss.mean()
+        # reduction "batchmean", sum and divide with batch_size
+        kickstarting_loss = kickstarting_loss.sum() / len(valids)
         kickstarting_loss *= self.cfg.kickstarting_loss_coeff
 
         return kickstarting_loss
@@ -141,17 +140,160 @@ class NetHackLearner(Learner):
 
         return supervised_loss
 
-    def _regularizer_losses(self, mb: AttrDict, num_invalids: int, dataset_mb: AttrDict):
-        supervised_loss = self.supervised_loss_func(dataset_mb)
-        valids = mb.valids
-        kickstarting_loss = self.kickstarting_loss_func(mb, valids, num_invalids)
+    def _calculate_losses(
+        self, mb: AttrDict, num_invalids: int
+    ) -> Tuple[ActionDistribution, Tensor, Tensor | float, Optional[Tensor], Tensor | float, Tensor, Dict]:
+        with torch.no_grad(), self.timing.add_time("losses_init"):
+            recurrence: int = self.cfg.recurrence
+
+            # PPO clipping
+            clip_ratio_high = 1.0 + self.cfg.ppo_clip_ratio  # e.g. 1.1
+            # this still works with e.g. clip_ratio = 2, while PPO's 1-r would give negative ratio
+            clip_ratio_low = 1.0 / clip_ratio_high
+            clip_value = self.cfg.ppo_clip_value
+
+            valids = mb.valids
+
+        # calculate policy head outside of recurrent loop
+        with self.timing.add_time("forward_head"):
+            head_outputs = self.actor_critic.forward_head(mb.normalized_obs)
+            minibatch_size: int = head_outputs.size(0)
+
+        # initial rnn states
+        with self.timing.add_time("bptt_initial"):
+            if self.cfg.use_rnn:
+                # this is the only way to stop RNNs from backpropagating through invalid timesteps
+                # (i.e. experience collected by another policy)
+                done_or_invalid = torch.logical_or(mb.dones_cpu, ~valids.cpu()).float()
+                head_output_seq, rnn_states, inverted_select_inds = build_rnn_inputs(
+                    head_outputs,
+                    done_or_invalid,
+                    mb.rnn_states,
+                    recurrence,
+                )
+            else:
+                rnn_states = mb.rnn_states[::recurrence]
+
+        # calculate RNN outputs for each timestep in a loop
+        with self.timing.add_time("bptt"):
+            if self.cfg.use_rnn:
+                with self.timing.add_time("bptt_forward_core"):
+                    core_output_seq, _ = self.actor_critic.forward_core(head_output_seq, rnn_states)
+                core_outputs = build_core_out_from_seq(core_output_seq, inverted_select_inds)
+                del core_output_seq
+            else:
+                core_outputs, _ = self.actor_critic.forward_core(head_outputs, rnn_states)
+
+            del head_outputs
+
+        num_trajectories = minibatch_size // recurrence
+        assert core_outputs.shape[0] == minibatch_size
+
+        with self.timing.add_time("tail"):
+            # calculate policy tail outside of recurrent loop
+            result = self.actor_critic.forward_tail(core_outputs, values_only=False, sample_actions=False)
+            action_distribution = self.actor_critic.action_distribution()
+            log_prob_actions = action_distribution.log_prob(mb.actions)
+            ratio = torch.exp(log_prob_actions - mb.log_prob_actions)  # pi / pi_old
+
+            # super large/small values can cause numerical problems and are probably noise anyway
+            ratio = torch.clamp(ratio, 0.05, 20.0)
+
+            values = result["values"].squeeze()
+
+            del core_outputs
+
+        # these computations are not the part of the computation graph
+        with torch.no_grad(), self.timing.add_time("advantages_returns"):
+            if self.cfg.with_vtrace:
+                # V-trace parameters
+                rho_hat = torch.Tensor([self.cfg.vtrace_rho])
+                c_hat = torch.Tensor([self.cfg.vtrace_c])
+
+                ratios_cpu = ratio.cpu()
+                values_cpu = values.cpu()
+                rewards_cpu = mb.rewards_cpu
+                dones_cpu = mb.dones_cpu
+
+                vtrace_rho = torch.min(rho_hat, ratios_cpu)
+                vtrace_c = torch.min(c_hat, ratios_cpu)
+
+                vs = torch.zeros((num_trajectories * recurrence))
+                adv = torch.zeros((num_trajectories * recurrence))
+
+                next_values = values_cpu[recurrence - 1 :: recurrence] - rewards_cpu[recurrence - 1 :: recurrence]
+                next_values /= self.cfg.gamma
+                next_vs = next_values
+
+                for i in reversed(range(self.cfg.recurrence)):
+                    rewards = rewards_cpu[i::recurrence]
+                    dones = dones_cpu[i::recurrence]
+                    not_done = 1.0 - dones
+                    not_done_gamma = not_done * self.cfg.gamma
+
+                    curr_values = values_cpu[i::recurrence]
+                    curr_vtrace_rho = vtrace_rho[i::recurrence]
+                    curr_vtrace_c = vtrace_c[i::recurrence]
+
+                    delta_s = curr_vtrace_rho * (rewards + not_done_gamma * next_values - curr_values)
+                    adv[i::recurrence] = curr_vtrace_rho * (rewards + not_done_gamma * next_vs - curr_values)
+                    next_vs = curr_values + delta_s + not_done_gamma * curr_vtrace_c * (next_vs - next_values)
+                    vs[i::recurrence] = next_vs
+
+                    next_values = curr_values
+
+                targets = vs.to(self.device)
+                adv = adv.to(self.device)
+            else:
+                # using regular GAE
+                adv = mb.advantages
+                targets = mb.returns
+
+            adv_std, adv_mean = torch.std_mean(masked_select(adv, valids, num_invalids))
+            adv = (adv - adv_mean) / torch.clamp_min(adv_std, 1e-7)  # normalize advantage
+
+        with self.timing.add_time("losses"):
+            # noinspection PyTypeChecker
+            policy_loss = self._policy_loss(ratio, adv, clip_ratio_low, clip_ratio_high, valids, num_invalids)
+            exploration_loss = self.exploration_loss_func(action_distribution, valids, num_invalids)
+            kl_old, kl_loss = self.kl_loss_func(
+                self.actor_critic.action_space, mb.action_logits, action_distribution, valids, num_invalids
+            )
+            old_values = mb["values"]
+            value_loss = self._value_loss(values, old_values, targets, clip_value, valids, num_invalids)
+
+        with self.timing.add_time("regularizer_losses"):
+            kickstarting_loss = self.kickstarting_loss_func(
+                result["action_logits"], result["kick_action_logits"], valids, num_invalids
+            )
+            supervised_loss = self.supervised_loss_func(mb)
+
         loss_summaries = dict(
+            ratio=ratio,
+            clip_ratio_low=clip_ratio_low,
+            clip_ratio_high=clip_ratio_high,
+            values=result["values"],
+            adv=adv,
+            adv_std=adv_std,
+            adv_mean=adv_mean,
+        )
+        regularizer_loss = supervised_loss + kickstarting_loss
+        regularizer_loss_summaries = dict(
             supervised_loss=to_scalar(supervised_loss),
             kickstarting_loss=to_scalar(kickstarting_loss),
         )
-        regularized_loss = supervised_loss + kickstarting_loss
 
-        return regularized_loss, loss_summaries
+        return (
+            action_distribution,
+            policy_loss,
+            exploration_loss,
+            kl_old,
+            kl_loss,
+            value_loss,
+            loss_summaries,
+            regularizer_loss,
+            regularizer_loss_summaries,
+        )
 
     def _train(
         self, gpu_buffer: TensorDict, batch_size: int, experience_size: int, num_invalids: int
@@ -216,18 +358,15 @@ class NetHackLearner(Learner):
                         kl_loss,
                         value_loss,
                         loss_summaries,
+                        regularizer_loss,
+                        regularizer_loss_summaries,
                     ) = self._calculate_losses(mb, num_invalids)
 
-                with timing.add_time("sample_dataset"):
-                    if self.use_dataset:
-                        dataset_mb = self._sample_dataset()
-                    else:
-                        dataset_mb = None
-
-                with timing.add_time("regularizer_losses"):
-                    regularizer_loss, regularizer_loss_summaries = self._regularizer_losses(
-                        mb, num_invalids, dataset_mb
-                    )
+                # with timing.add_time("sample_dataset"):
+                #     if self.use_dataset:
+                #         dataset_mb = self._sample_dataset()
+                #     else:
+                #         dataset_mb = None
 
                 if self.use_dataset:
                     # Only call step when you are done with dataset data - it may get overwritten
