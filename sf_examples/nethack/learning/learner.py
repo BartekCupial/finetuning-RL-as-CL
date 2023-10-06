@@ -116,10 +116,10 @@ class NetHackLearner(Learner):
         self.dataset_rnn_states[idx] = rnn_states.detach()
         return dataset_mb
 
-    def _kickstarting_loss(self, student_logits, teacher_logits, valids, num_invalids: int):
+    def _kickstarting_loss(self, result, valids, num_invalids: int):
         kickstarting_loss = F.kl_div(
-            F.log_softmax(student_logits, dim=-1),
-            F.log_softmax(teacher_logits, dim=-1),
+            F.log_softmax(result["action_logits"], dim=-1),
+            F.log_softmax(result["kick_action_logits"], dim=-1),
             log_target=True,
             reduction="none",
         )
@@ -263,9 +263,7 @@ class NetHackLearner(Learner):
             value_loss = self._value_loss(values, old_values, targets, clip_value, valids, num_invalids)
 
         with self.timing.add_time("regularizer_losses"):
-            kickstarting_loss = self.kickstarting_loss_func(
-                result["action_logits"], result["kick_action_logits"], valids, num_invalids
-            )
+            kickstarting_loss = self.kickstarting_loss_func(result, valids, num_invalids)
             supervised_loss = self.supervised_loss_func(mb)
 
         loss_summaries = dict(
