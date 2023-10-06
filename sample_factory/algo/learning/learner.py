@@ -149,6 +149,7 @@ class Learner(Configurable):
 
         self.train_step: int = 0  # total number of SGD steps
         self.env_steps: int = 0  # total number of environment steps consumed by the learner
+        self.checkpoint_steps: int = -1  # used for saving the milestone every ith step
 
         self.best_performance = -1e9
 
@@ -1031,6 +1032,10 @@ class Learner(Configurable):
             return buff, dataset_size, num_invalids
 
     def train(self, batch: TensorDict) -> Optional[Dict]:
+        if self.cfg.save_milestones_ith > 0 and self.env_steps // self.cfg.save_milestones_ith > self.checkpoint_steps:
+            self.save_milestone()
+            self.checkpoint_steps = self.env_steps // self.cfg.save_milestones_ith
+
         with self.timing.add_time("misc"):
             self._maybe_update_cfg()
             self._maybe_load_policy()

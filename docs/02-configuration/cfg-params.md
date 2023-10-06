@@ -67,6 +67,7 @@ usage: train_gym_env.py [-h] [--algo ALGO] --env ENV [--experiment EXPERIMENT]
                         [--keep_checkpoints KEEP_CHECKPOINTS]
                         [--load_checkpoint_kind {latest,best}]
                         [--save_milestones_sec SAVE_MILESTONES_SEC]
+                        [--save_milestones_ith SAVE_MILESTONES_ITH]
                         [--save_best_every_sec SAVE_BEST_EVERY_SEC]
                         [--save_best_metric SAVE_BEST_METRIC]
                         [--save_best_after SAVE_BEST_AFTER]
@@ -471,6 +472,9 @@ optional arguments:
                         Whether to load from latest or best checkpoint
                         (default: latest)
   --save_milestones_sec SAVE_MILESTONES_SEC
+                        Save intermediate checkpoints in a separate folder for
+                        later evaluation (default=never) (default: -1)
+  --save_milestones_ith SAVE_MILESTONES_ITH
                         Save intermediate checkpoints in a separate folder for
                         later evaluation (default=never) (default: -1)
   --save_best_every_sec SAVE_BEST_EVERY_SEC

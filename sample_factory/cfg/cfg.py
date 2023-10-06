@@ -469,6 +469,12 @@ def add_rl_args(p: ArgumentParser):
         help="Save intermediate checkpoints in a separate folder for later evaluation (default=never)",
     )
     p.add_argument(
+        "--save_milestones_ith",
+        default=-1,
+        type=int,
+        help="Save intermediate checkpoints in a separate folder for later evaluation (default=never)",
+    )
+    p.add_argument(
         "--save_best_every_sec",
         default=5,
         type=int,
@@ -498,7 +504,9 @@ def add_model_args(p: ArgumentParser):
     settings for one or the other. If we're using MLP encoder, conv encoder settings will be ignored.
     """
     # policy with vector observations - encoder options
-    p.add_argument("--use_actor_critic_info_cache", default=False, type=str2bool, help="Whether to use cached actor critic info")
+    p.add_argument(
+        "--use_actor_critic_info_cache", default=False, type=str2bool, help="Whether to use cached actor critic info"
+    )
     p.add_argument(
         "--encoder_mlp_layers",
         default=[512, 512],

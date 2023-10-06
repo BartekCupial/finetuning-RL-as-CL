@@ -17,6 +17,7 @@ config = {
     "batch_size": 4096,  # this equals bs = 128, 128 * 32 = 4096
     "async_rl": True,
     "serial_mode": False,
+    "save_milestones_ith": 10_000_000,
     "wandb_user": "bartekcupial",
     "wandb_project": "sf2_nethack",
     "wandb_group": "gmum",
