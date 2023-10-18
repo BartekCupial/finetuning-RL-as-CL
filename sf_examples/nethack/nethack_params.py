@@ -1,3 +1,6 @@
+from sample_factory.utils.utils import str2bool
+
+
 def add_extra_params_nethack_env(parser):
     """
     Specify any additional command line arguments for NetHack environments.
@@ -13,7 +16,7 @@ def add_extra_params_nethack_env(parser):
     p.add_argument("--save_ttyrec_every", type=int, default=0)
     p.add_argument("--gameloaddir", type=str, default=None)
     p.add_argument("--state_counter", type=str, default=None)
-    p.add_argument("--add_image_observation", type=bool, default=True)
+    p.add_argument("--add_image_observation", type=str2bool, default=True)
     p.add_argument("--crop_dim", type=int, default=18)
     p.add_argument("--pixel_size", type=int, default=6)
 
@@ -40,6 +43,8 @@ def add_extra_params_learner(parser):
     """
     # TODO: add help
     p = parser
+    p.add_argument("--use_dataset", type=str2bool, default=False)
+    p.add_argument("--behavioral_clone", type=str2bool, default=False)
     p.add_argument("--data_path", type=str, default="/nle/nld-aa/nle_data")
     p.add_argument("--db_path", type=str, default="/ttyrecs/ttyrecs.db")
     p.add_argument("--dataset_name", type=str, default="autoascend")
@@ -48,10 +53,10 @@ def add_extra_params_learner(parser):
     p.add_argument("--dataset_rollout", type=int, default=32)
     p.add_argument("--dataset_batch_size", type=int, default=1024)
     p.add_argument("--dataset_num_workers", type=int, default=8)
-    p.add_argument("--dataset_demigod", type=bool, default=False)
-    p.add_argument("--dataset_highscore", type=bool, default=False)
-    p.add_argument("--dataset_midscore", type=bool, default=False)
-    p.add_argument("--dataset_deep", type=bool, default=False)
+    p.add_argument("--dataset_demigod", type=str2bool, default=False)
+    p.add_argument("--dataset_highscore", type=str2bool, default=False)
+    p.add_argument("--dataset_midscore", type=str2bool, default=False)
+    p.add_argument("--dataset_deep", type=str2bool, default=False)
 
 
 def add_extra_params_general(parser):
@@ -63,13 +68,13 @@ def add_extra_params_general(parser):
     p.add_argument("--exp_tags", type=str, default="local")
     p.add_argument("--exp_point", type=str, default="point-A")
     p.add_argument("--group", type=str, default="group2")
-    p.add_argument("--use_pretrained_checkpoint", type=bool, default=False)
+    p.add_argument("--use_pretrained_checkpoint", type=str2bool, default=False)
     p.add_argument("--model_path", type=str, default=None)
     p.add_argument("--supervised_loss_coeff", type=float, default=0.0)
     p.add_argument("--kickstarting_loss_coeff", type=float, default=0.0)
     p.add_argument("--distilling_loss_coeff", type=float, default=0.0)
     p.add_argument("--teacher_path", type=str, default=None)
-    p.add_argument("--run_teacher_hs", type=bool, default=False)
+    p.add_argument("--run_teacher_hs", type=str2bool, default=False)
 
 
 def nethack_override_defaults(_env, parser):

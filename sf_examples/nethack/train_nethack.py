@@ -1,6 +1,7 @@
 import sys
 from os.path import join
 
+from sample_factory.algo.learning.learner import Learner
 from sample_factory.algo.utils.context import global_model_factory, sf_global_context
 from sample_factory.cfg.arguments import load_from_path, parse_full_cfg, parse_sf_args
 from sample_factory.envs.env_utils import register_env
@@ -9,7 +10,7 @@ from sample_factory.model.encoder import Encoder
 from sample_factory.train import run_rl
 from sample_factory.utils.typing import ActionSpace, Config, ObsSpace
 from sample_factory.utils.utils import log
-from sf_examples.nethack.learning.learner import NetHackLearner
+from sf_examples.nethack.algo.learning.learner import DatasetLearner
 from sf_examples.nethack.models.chaotic_dwarf import ChaoticDwarvenGPT5
 from sf_examples.nethack.models.kickstarter import KickStarter
 from sf_examples.nethack.nethack_params import (
@@ -34,11 +35,9 @@ def make_nethack_encoder(cfg: Config, obs_space: ObsSpace) -> Encoder:
 
 
 def load_pretrained_checkpoint(model, checkpoint_dir, checkpoint_kind):
-    learner_cls = sf_global_context().learner_cls
-
     name_prefix = dict(latest="checkpoint", best="best")[checkpoint_kind]
-    checkpoints = learner_cls.get_checkpoints(join(checkpoint_dir, "checkpoint_p0"), f"{name_prefix}_*")
-    checkpoint_dict = learner_cls.load_checkpoint(checkpoints, "cpu")
+    checkpoints = Learner.get_checkpoints(join(checkpoint_dir, "checkpoint_p0"), f"{name_prefix}_*")
+    checkpoint_dict = Learner.load_checkpoint(checkpoints, "cpu")
     model.load_state_dict(checkpoint_dict["model"])
 
 
@@ -67,7 +66,7 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
 
 
 def register_nethack_learner():
-    sf_global_context().learner_cls = NetHackLearner
+    sf_global_context().learner_cls = DatasetLearner
 
 
 def register_nethack_components():

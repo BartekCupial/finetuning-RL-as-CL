@@ -16,7 +16,6 @@ from sample_factory.algo.learning.batcher import Batcher
 from sample_factory.algo.learning.learner_worker import LearnerWorker
 from sample_factory.algo.sampling.sampler import AbstractSampler
 from sample_factory.algo.utils.env_info import EnvInfo, obtain_env_info_in_a_separate_process
-from sample_factory.algo.utils.actor_critic_info import ActorCriticInfo, obtain_ac_info_in_a_separate_process
 from sample_factory.algo.utils.heartbeat import HeartbeatStoppableEventLoopObject
 from sample_factory.algo.utils.misc import (
     EPISODIC,
@@ -90,7 +89,6 @@ class Runner(EventLoopObject, Configurable):
         self.stopped: bool = False
 
         self.env_info: Optional[EnvInfo] = None
-        self.actor_critic_info: Optional[ActorCriticInfo] = None
 
         self.reward_shaping: List[Optional[Dict]] = [None for _ in range(self.cfg.num_policies)]
 
@@ -522,10 +520,11 @@ class Runner(EventLoopObject, Configurable):
             json.dump(cfg_dict(self.cfg), json_file, indent=2)
 
     def _make_batcher(self, event_loop, policy_id: PolicyID):
-        return Batcher(event_loop, policy_id, self.buffer_mgr, self.cfg, self.env_info, self.actor_critic_info)
+        return Batcher(event_loop, policy_id, self.buffer_mgr, self.cfg, self.env_info)
 
     def _make_learner(self, event_loop, policy_id: PolicyID, batcher: Batcher):
         from sample_factory.algo.utils.context import global_learner_cls
+
         learner_cls = global_learner_cls()
         return LearnerWorker(
             learner_cls,
@@ -545,7 +544,6 @@ class Runner(EventLoopObject, Configurable):
     def init(self) -> StatusCode:
         set_global_cuda_envvars(self.cfg)
         self.env_info = obtain_env_info_in_a_separate_process(self.cfg)
-        self.actor_critic_info = obtain_ac_info_in_a_separate_process(self.cfg, self.env_info)
 
         for policy_id in range(self.cfg.num_policies):
             self.reward_shaping[policy_id] = self.env_info.reward_shaping_scheme
@@ -560,7 +558,7 @@ class Runner(EventLoopObject, Configurable):
         self._save_cfg()
         save_git_diff(experiment_dir(self.cfg))
 
-        self.buffer_mgr = BufferMgr(self.cfg, self.env_info, self.actor_critic_info)
+        self.buffer_mgr = BufferMgr(self.cfg, self.env_info)
 
         self._observers_call(AlgoObserver.on_init, self)
 

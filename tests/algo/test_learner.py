@@ -7,7 +7,6 @@ import torch
 from sample_factory.algo.learning.learner import Learner
 from sample_factory.algo.sampling.simplified_sampling_api import SyncSamplingAPI
 from sample_factory.algo.utils.env_info import extract_env_info
-from sample_factory.algo.utils.actor_critic_info import extract_actor_critic_info
 from sample_factory.algo.utils.make_env import make_env_func_batched
 from sample_factory.algo.utils.model_sharing import ParameterServer
 from sample_factory.algo.utils.rl_utils import samples_per_trajectory
@@ -16,7 +15,6 @@ from sample_factory.cfg.arguments import verify_cfg
 from sample_factory.utils.attr_dict import AttrDict
 from sample_factory.utils.dicts import iterate_recursively
 from sf_examples.mujoco.train_mujoco import parse_mujoco_cfg, register_mujoco_components
-from sample_factory.model.actor_critic import create_actor_critic
 
 
 def _learner_losses_res(learner: Learner, dataset: AttrDict, num_invalids: int) -> AttrDict:
@@ -65,11 +63,6 @@ class TestValidMasks:
 
         tmp_env = make_env_func_batched(cfg, env_config=None)
         env_info = extract_env_info(tmp_env, cfg)
-        del tmp_env
-        
-        tmp_actor_critic = create_actor_critic(cfg, env_info.obs_space, env_info.action_space)
-        actor_critic_info = extract_actor_critic_info(tmp_actor_critic, env_info, cfg)
-        del tmp_actor_critic
 
         assert verify_cfg(cfg, env_info)
 
@@ -77,7 +70,7 @@ class TestValidMasks:
         policy_id = 0
         policy_versions = torch.zeros([cfg.num_policies], dtype=torch.int32)
         param_server = ParameterServer(policy_id, policy_versions, cfg.serial_mode)
-        sampler = SyncSamplingAPI(cfg, env_info, actor_critic_info, param_servers={policy_id: param_server})
+        sampler = SyncSamplingAPI(cfg, env_info, param_servers={policy_id: param_server})
 
         learner: Learner = Learner(cfg, env_info, policy_versions, policy_id, param_server)
         init_model_data = learner.init()

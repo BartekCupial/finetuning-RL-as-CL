@@ -9,7 +9,6 @@ from signal_slot.signal_slot import EventLoop, EventLoopObject, EventLoopStatus,
 
 from sample_factory.algo.sampling.sampler import AbstractSampler, ParallelSampler, SerialSampler
 from sample_factory.algo.utils.env_info import EnvInfo
-from sample_factory.algo.utils.actor_critic_info import ActorCriticInfo
 from sample_factory.algo.utils.misc import ExperimentStatus
 from sample_factory.algo.utils.model_sharing import ParameterServer
 from sample_factory.algo.utils.shared_buffers import BufferMgr
@@ -21,7 +20,7 @@ from sample_factory.utils.utils import log
 
 
 class SamplingLoop(EventLoopObject, Configurable):
-    def __init__(self, cfg: Config, env_info: EnvInfo, actor_critic_info: ActorCriticInfo):
+    def __init__(self, cfg: Config, env_info: EnvInfo):
         Configurable.__init__(self, cfg)
         unique_name = SamplingLoop.__name__
         self.event_loop: EventLoop = EventLoop(unique_loop_name=f"{unique_name}_EvtLoop", serial_mode=cfg.serial_mode)
@@ -30,7 +29,6 @@ class SamplingLoop(EventLoopObject, Configurable):
         # self.event_loop.verbose = True
 
         self.env_info = env_info
-        self.actor_critic_info = actor_critic_info
         self.iteration: int = 0
 
         self.buffer_mgr: Optional[BufferMgr] = None
@@ -61,7 +59,7 @@ class SamplingLoop(EventLoopObject, Configurable):
 
         self.buffer_mgr = buffer_mgr
         if self.buffer_mgr is None:
-            self.buffer_mgr = BufferMgr(self.cfg, self.env_info, self.actor_critic_info)
+            self.buffer_mgr = BufferMgr(self.cfg, self.env_info)
 
         self.param_servers = param_servers
         if self.param_servers is None:
@@ -160,11 +158,10 @@ class SyncSamplingAPI:
         self,
         cfg: Config,
         env_info: EnvInfo,
-        actor_critic_info: ActorCriticInfo,
         buffer_mgr: Optional[BufferMgr] = None,
         param_servers: Optional[Dict[PolicyID, ParameterServer]] = None,
     ):
-        self.sampling_loop: SamplingLoop = SamplingLoop(cfg, env_info, actor_critic_info)
+        self.sampling_loop: SamplingLoop = SamplingLoop(cfg, env_info)
         self.sampling_loop.init(buffer_mgr, param_servers)
         self.sampling_loop.set_new_trajectory_callback(self._on_new_trajectories)
         self.sampling_thread: Thread = Thread(target=self.sampling_loop.run)

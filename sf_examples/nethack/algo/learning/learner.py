@@ -9,9 +9,10 @@ from sample_factory.algo.learning.learner import Learner
 from sample_factory.algo.learning.rnn_utils import build_core_out_from_seq, build_rnn_inputs
 from sample_factory.algo.utils.action_distributions import get_action_distribution
 from sample_factory.algo.utils.env_info import EnvInfo
+from sample_factory.algo.utils.misc import LEARNER_ENV_STEPS, POLICY_ID_KEY, STATS_KEY, TRAIN_STATS, memory_stats
 from sample_factory.algo.utils.model_sharing import ParameterServer
 from sample_factory.algo.utils.rl_utils import prepare_and_normalize_obs
-from sample_factory.algo.utils.shared_buffers import init_tensor
+from sample_factory.algo.utils.shared_buffers import alloc_trajectory_tensors
 from sample_factory.algo.utils.tensor_dict import TensorDict
 from sample_factory.algo.utils.tensor_utils import ensure_torch_tensor
 from sample_factory.algo.utils.torch_utils import masked_select, synchronize, to_scalar
@@ -19,11 +20,12 @@ from sample_factory.model.model_utils import get_rnn_size
 from sample_factory.utils.attr_dict import AttrDict
 from sample_factory.utils.typing import ActionDistribution, Config, InitModelData, PolicyID
 from sample_factory.utils.utils import log
-from sf_examples.nethack.datasets.dataset import TtyrecDatasetWorker
+from sf_examples.nethack.algo.sampling.rollout_worker import DatasetRolloutWorker
+from sf_examples.nethack.datasets.dataset_info import DatasetInfo, extract_dataset_info
 
 
-class NetHackLearner(Learner):
-    def __ini__(
+class DatasetLearner(Learner):
+    def __init__(
         self,
         cfg: Config,
         env_info: EnvInfo,
@@ -39,8 +41,12 @@ class NetHackLearner(Learner):
             param_server,
         )
 
-        self.dataset = None
-        self.dataset_rnn_states = None
+        self.dataset_info: DatasetInfo = None
+
+        self.dataset_idx = 0
+        self.dataset_rollout_worker = None
+        self.dataset_last_rnn_states = []
+        self.dataset_training_batches = []
 
         self.supervised_loss_func: Optional[Callable] = None
         self.kickstarting_loss_func: Optional[Callable] = None
@@ -48,24 +54,30 @@ class NetHackLearner(Learner):
     def init(self) -> InitModelData:
         init_model_data = super().init()
 
-        supervised_learning = self.cfg.supervised_loss_coeff != 0
-        # TODO: distillation
-        self.use_dataset = supervised_learning
+        if self.cfg.use_dataset:
+            self.dataset_rollout_worker = DatasetRolloutWorker(self.cfg)
+            self.dataset_info = extract_dataset_info(self.dataset_rollout_worker.dataset, self.cfg)
 
-        if self.use_dataset:
-            self.dataset = TtyrecDatasetWorker(self.cfg)
+            self.max_batches_to_accumulate = self.cfg.dataset_num_splits
 
-            rnn_size = get_rnn_size(self.cfg)
-            sampling_device = "cpu"  # TODO: check if we can use gpu here
-            dataset_num_traj = self.cfg.dataset_batch_size // self.cfg.dataset_rollout
-            self.dataset_rnn_states = []
-            for _ in range(self.cfg.dataset_num_splits):
-                hs = init_tensor([dataset_num_traj], torch.float32, [rnn_size], sampling_device, False)
-                self.dataset_rnn_states.append(hs)
+            for i in range(self.max_batches_to_accumulate):
+                rnn_size = get_rnn_size(self.cfg)
+                training_batch = alloc_trajectory_tensors(
+                    self.dataset_info,
+                    self.dataset_rollout_worker.dataset.dataset_batch_size,
+                    self.cfg.dataset_rollout,
+                    rnn_size,
+                    self.device,
+                    False,
+                )
+                rnn_states = torch.zeros_like(training_batch["rnn_states"][:, 0])
+                self.dataset_last_rnn_states.append(rnn_states)
+                self.dataset_training_batches.append(training_batch)
 
         if self.cfg.supervised_loss_coeff == 0.0:
-            self.supervised_loss_func = lambda dataset_mb: 0.0
+            self.supervised_loss_func = lambda mb_results, mb, num_invalids: 0.0
         else:
+            assert self.cfg.use_dataset
             self.supervised_loss_func = self._supervised_loss
 
         if self.cfg.kickstarting_loss_coeff == 0.0:
@@ -74,47 +86,6 @@ class NetHackLearner(Learner):
             self.kickstarting_loss_func = self._kickstarting_loss
 
         return init_model_data
-
-    def _sample_dataset(self):
-        # TODO: split this code into pieces, for loop should be inside model, only keep the loss related stuff
-        dataset_mb = self.dataset.result()
-        idx = self.dataset.idx
-
-        obs = {
-            key: value
-            for key, value in dataset_mb.items()
-            if key in ["tty_chars", "tty_colors", "tty_cursor", "screen_image"]
-        }
-        normalized_obs = prepare_and_normalize_obs(self.actor_critic, obs)
-        dataset_mb["normalized_obs"] = normalized_obs
-
-        rnn_states = self.dataset_rnn_states[idx]
-        # TODO: do we want to keep hidden states between rollouts?
-        rnn_states = torch.zeros_like(rnn_states)
-        rnn_states = ensure_torch_tensor(rnn_states).to(self.device).float()
-
-        dones = dataset_mb["dones"]
-        for i in range(len(dones)):
-            step_dones = dones[i]
-            # Reset rnn_state to zero whenever an episode ended
-            # Make sure it is broadcastable with rnn_states
-            rnn_states = rnn_states * (~step_dones).float().view(-1, 1)
-            step_normalized_obs = {key: value[i] for key, value in dataset_mb["normalized_obs"].items()}
-
-            policy_outputs = self.actor_critic(step_normalized_obs, rnn_states)
-            rnn_states = policy_outputs["new_rnn_states"]
-
-            for key, value in policy_outputs.items():
-                if key not in dataset_mb:
-                    dataset_mb[key] = []
-                dataset_mb[key].append(value)
-
-        for key in policy_outputs.keys():
-            dataset_mb[key] = torch.concatenate(dataset_mb[key])
-
-        # store rnn_states, for next rollout
-        self.dataset_rnn_states[idx] = rnn_states.detach()
-        return dataset_mb
 
     def _kickstarting_loss(self, result, valids, num_invalids: int):
         kickstarting_loss = F.kl_div(
@@ -130,28 +101,71 @@ class NetHackLearner(Learner):
 
         return kickstarting_loss
 
-    def _supervised_loss(self, dataset_mb):
-        outputs = dataset_mb["action_logits"]
-        targets = dataset_mb["actions_converted"].reshape(-1)
+    def _supervised_loss(self, mb_results, mb, num_invalids):
+        result = mb_results["result"]
+        valids = mb_results["valids"]
+        outputs = result["action_logits"]
+        targets = mb["normalized_obs"]["actions_converted"].reshape(-1).long()
         supervised_loss = F.cross_entropy(outputs, targets)
-
+        supervised_loss = masked_select(supervised_loss, valids, num_invalids)
         supervised_loss = supervised_loss.mean()
         supervised_loss *= self.cfg.supervised_loss_coeff
 
         return supervised_loss
 
-    def _calculate_losses(
-        self, mb: AttrDict, num_invalids: int
-    ) -> Tuple[ActionDistribution, Tensor, Tensor | float, Optional[Tensor], Tensor | float, Tensor, Dict]:
+    def _sample_dataset_batch(self):
+        batch = self.dataset_training_batches[self.dataset_idx]
+        rnn_states = self.dataset_last_rnn_states[self.dataset_idx]
+        obs = self.dataset_rollout_worker.sample_batch(self.dataset_idx)
+
+        with torch.no_grad():
+            with self.timing.add_time("stack"):
+                for key, x in obs.items():
+                    obs[key] = ensure_torch_tensor(x)
+
+            num_samples, seq_len = batch["rewards"].shape[0], batch["rewards"].shape[1]
+
+            with self.timing.add_time("obs_to_device_normalize"):
+                actor_critic = self.actor_critic
+                if actor_critic.training:
+                    actor_critic.eval()  # need to call this because we can be in serial mode
+
+                normalized_obs = prepare_and_normalize_obs(actor_critic, obs)
+                rnn_states = ensure_torch_tensor(rnn_states).to(self.device).float()
+
+            batch["obs"] = normalized_obs
+            batch["dones"] = normalized_obs["dones"].bool()[:, :-1]
+            batch["policy_id"].fill_(self.policy_id)
+            batch["valids"].fill_(True)
+            # TODO: maybe also return rewards calculated based on scores
+
+            with self.timing.add_time("forward"):
+                for i in range(seq_len):
+                    rnn_state = batch["rnn_states"][:, i]
+                    i_normalized_obs = {key: value[:, i] for key, value in normalized_obs.items()}
+                    policy_outputs = actor_critic(i_normalized_obs, rnn_state)
+                    policy_outputs["policy_version"] = torch.empty([num_samples]).fill_(self.train_step)
+                    # this workaround results from mismatch between policy_outputs["actions"] and batch["actions"]
+                    # in normal code this is resolved with policy_output_tensor, which concatenates all policy_outputs
+                    policy_outputs["actions"].unsqueeze_(-1)
+                    # reset next-step hidden states to zero if we encountered an episode boundary
+                    # not sure if this is the best practice, but this is what everybody seems to be doing
+                    not_done = (1.0 - i_normalized_obs["dones"].float()).unsqueeze(-1)
+                    batch["rnn_states"][:, i + 1] = policy_outputs["new_rnn_states"] * not_done
+                    batch[:, i] = policy_outputs
+                    # we don't store new_rnn_states in buffer
+                    del policy_outputs["new_rnn_states"]
+                    for key in policy_outputs.keys():
+                        batch[key][:, i] = policy_outputs[key]
+
+        self.dataset_last_rnn_states[self.dataset_idx] = batch["rnn_states"][:, i + 1]
+        self.dataset_idx = (self.dataset_idx + 1) % self.cfg.dataset_num_splits
+
+        return batch
+
+    def _compute_model_outputs(self, mb: TensorDict, num_invalids: int):
         with torch.no_grad(), self.timing.add_time("losses_init"):
             recurrence: int = self.cfg.recurrence
-
-            # PPO clipping
-            clip_ratio_high = 1.0 + self.cfg.ppo_clip_ratio  # e.g. 1.1
-            # this still works with e.g. clip_ratio = 2, while PPO's 1-r would give negative ratio
-            clip_ratio_low = 1.0 / clip_ratio_high
-            clip_value = self.cfg.ppo_clip_value
-
             valids = mb.valids
 
         # calculate policy head outside of recurrent loop
@@ -252,25 +266,81 @@ class NetHackLearner(Learner):
             adv_std, adv_mean = torch.std_mean(masked_select(adv, valids, num_invalids))
             adv = (adv - adv_mean) / torch.clamp_min(adv_std, 1e-7)  # normalize advantage
 
+        return dict(
+            result=result,
+            ratio=ratio,
+            adv=adv,
+            adv_std=adv_std,
+            adv_mean=adv_mean,
+            values=values,
+            targets=targets,
+            valids=valids,
+        )
+
+    def _calculate_losses(
+        self,
+        mb: AttrDict,
+        num_invalids: int,
+        dataset_mb: Optional[AttrDict] = None,
+        dataset_num_invalids: Optional[AttrDict] = None,
+    ) -> Tuple[ActionDistribution, Tensor, Tensor | float, Optional[Tensor], Tensor | float, Tensor, Dict]:
+        # PPO clipping
+        clip_ratio_high = 1.0 + self.cfg.ppo_clip_ratio  # e.g. 1.1
+        # this still works with e.g. clip_ratio = 2, while PPO's 1-r would give negative ratio
+        clip_ratio_low = 1.0 / clip_ratio_high
+        clip_value = self.cfg.ppo_clip_value
+
+        mb_results = self._compute_model_outputs(mb, num_invalids)
+        # we want action distribution (last) of the same shape as mb
+        action_distribution = self.actor_critic.action_distribution()
+
+        dataset_mb_results = self._compute_model_outputs(dataset_mb, dataset_num_invalids) if dataset_mb else None
+
         with self.timing.add_time("losses"):
-            # noinspection PyTypeChecker
-            policy_loss = self._policy_loss(ratio, adv, clip_ratio_low, clip_ratio_high, valids, num_invalids)
-            exploration_loss = self.exploration_loss_func(action_distribution, valids, num_invalids)
-            kl_old, kl_loss = self.kl_loss_func(
-                self.actor_critic.action_space, mb.action_logits, action_distribution, valids, num_invalids
-            )
-            old_values = mb["values"]
-            value_loss = self._value_loss(values, old_values, targets, clip_value, valids, num_invalids)
+            if not self.cfg.behavioral_clone:
+                ratio = mb_results["ratio"]
+                adv = mb_results["adv"]
+                adv_mean = mb_results["adv_mean"]
+                adv_std = mb_results["adv_std"]
+                valids = mb_results["valids"]
+                values = mb_results["values"]
+                targets = mb_results["targets"]
+
+                # noinspection PyTypeChecker
+                policy_loss = self._policy_loss(ratio, adv, clip_ratio_low, clip_ratio_high, valids, num_invalids)
+                exploration_loss = self.exploration_loss_func(action_distribution, valids, num_invalids)
+                kl_old, kl_loss = self.kl_loss_func(
+                    self.actor_critic.action_space, mb.action_logits, action_distribution, valids, num_invalids
+                )
+                old_values = mb["values"]
+                value_loss = self._value_loss(values, old_values, targets, clip_value, valids, num_invalids)
+            else:
+                ratio = torch.tensor([0.0])
+                policy_loss = 0.0
+                exploration_loss = 0.0
+                kl_old, kl_loss = torch.tensor([0.0]), 0.0
+                value_loss = 0.0
+                kickstarting_loss = 0.0
+                adv, adv_mean, adv_std = 0.0, 0.0, 0.0
+                values = torch.tensor([0.0]).to(self.device)
 
         with self.timing.add_time("regularizer_losses"):
-            kickstarting_loss = self.kickstarting_loss_func(result, valids, num_invalids)
-            supervised_loss = self.supervised_loss_func(mb)
+            kickstarting_loss = self.kickstarting_loss_func(
+                mb_results["result"],
+                mb_results["valids"],
+                num_invalids,
+            )
+            supervised_loss = self.supervised_loss_func(
+                dataset_mb_results,
+                dataset_mb,
+                dataset_num_invalids,
+            )
 
         loss_summaries = dict(
             ratio=ratio,
             clip_ratio_low=clip_ratio_low,
             clip_ratio_high=clip_ratio_high,
-            values=result["values"],
+            values=values,
             adv=adv,
             adv_std=adv_std,
             adv_mean=adv_mean,
@@ -294,7 +364,15 @@ class NetHackLearner(Learner):
         )
 
     def _train(
-        self, gpu_buffer: TensorDict, batch_size: int, experience_size: int, num_invalids: int
+        self,
+        gpu_buffer: TensorDict,
+        batch_size: int,
+        experience_size: int,
+        num_invalids: int,
+        ds_gpu_buffer: Optional[TensorDict] = None,
+        ds_batch_size: Optional[int] = None,
+        ds_experience_size: Optional[int] = None,
+        ds_num_invalids: Optional[int] = None,
     ) -> Optional[AttrDict]:
         timing = self.timing
         with torch.no_grad():
@@ -336,16 +414,22 @@ class NetHackLearner(Learner):
 
                 force_summaries = False
                 minibatches = self._get_minibatches(batch_size, experience_size)
+                ds_minibatches = (
+                    self._get_minibatches(ds_batch_size, ds_experience_size) if ds_experience_size else None
+                )
 
             for batch_num in range(len(minibatches)):
                 with torch.no_grad(), timing.add_time("minibatch_init"):
                     indices = minibatches[batch_num]
+                    ds_indices = ds_minibatches[batch_num] if ds_minibatches else None
 
                     # current minibatch consisting of short trajectory segments with length == recurrence
                     mb = self._get_minibatch(gpu_buffer, indices)
+                    ds_mb = self._get_minibatch(ds_gpu_buffer, ds_indices) if ds_gpu_buffer else None
 
                     # enable syntactic sugar that allows us to access dict's keys as object attributes
                     mb = AttrDict(mb)
+                    ds_mb = AttrDict(ds_mb) if ds_mb else None
 
                 with timing.add_time("calculate_losses"):
                     (
@@ -358,17 +442,7 @@ class NetHackLearner(Learner):
                         loss_summaries,
                         regularizer_loss,
                         regularizer_loss_summaries,
-                    ) = self._calculate_losses(mb, num_invalids)
-
-                # with timing.add_time("sample_dataset"):
-                #     if self.use_dataset:
-                #         dataset_mb = self._sample_dataset()
-                #     else:
-                #         dataset_mb = None
-
-                if self.use_dataset:
-                    # Only call step when you are done with dataset data - it may get overwritten
-                    self.dataset.step()
+                    ) = self._calculate_losses(mb, num_invalids, ds_mb, ds_num_invalids)
 
                 with timing.add_time("losses_postprocess"):
                     # noinspection PyTypeChecker
@@ -480,3 +554,59 @@ class NetHackLearner(Learner):
             prev_epoch_actor_loss = new_epoch_actor_loss
 
         return stats_and_summaries
+
+    def train(self, batch: TensorDict) -> Optional[Dict]:
+        if self.cfg.save_milestones_ith > 0 and self.env_steps // self.cfg.save_milestones_ith > self.checkpoint_steps:
+            self.save_milestone()
+            self.checkpoint_steps = self.env_steps // self.cfg.save_milestones_ith
+
+        with self.timing.add_time("misc"):
+            self._maybe_update_cfg()
+            self._maybe_load_policy()
+
+        with self.timing.add_time("sample_dataset_batch"):
+            dataset_batch = self._sample_dataset_batch() if self.cfg.use_dataset else None
+
+        with self.timing.add_time("prepare_batch"):
+            buff, experience_size, num_invalids = self._prepare_batch(batch)
+            if dataset_batch:
+                ds_buff, ds_experience_size, ds_num_invalids = self._prepare_batch(dataset_batch)
+            else:
+                ds_buff, ds_experience_size, ds_num_invalids = None, None, None
+
+        if num_invalids >= experience_size:
+            if self.cfg.with_pbt:
+                log.warning("No valid samples in the batch, with PBT this must mean we just replaced weights")
+            else:
+                log.error(f"Learner {self.policy_id=} received an entire batch of invalid data, skipping...")
+            return None
+        else:
+            with self.timing.add_time("train"):
+                train_stats = self._train(
+                    buff,
+                    self.cfg.batch_size,
+                    experience_size,
+                    num_invalids,
+                    ds_buff,
+                    self.cfg.dataset_batch_size,
+                    ds_experience_size,
+                    ds_num_invalids,
+                )
+
+            # multiply the number of samples by frameskip so that FPS metrics reflect the number
+            # of environment steps actually simulated
+            if self.cfg.behavioral_clone:
+                self.env_steps += ds_experience_size
+            else:
+                if self.cfg.summaries_use_frameskip:
+                    self.env_steps += experience_size * self.env_info.frameskip
+                else:
+                    self.env_steps += experience_size
+
+            stats = {LEARNER_ENV_STEPS: self.env_steps, POLICY_ID_KEY: self.policy_id}
+            if train_stats is not None:
+                if train_stats is not None:
+                    stats[TRAIN_STATS] = train_stats
+                stats[STATS_KEY] = memory_stats("learner", self.device)
+
+            return stats

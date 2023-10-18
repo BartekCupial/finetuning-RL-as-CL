@@ -1,6 +1,6 @@
 import os
-from concurrent.futures import ThreadPoolExecutor
 
+import gymnasium as gym
 import nle.dataset as nld
 import numpy as np
 import render_utils
@@ -11,14 +11,11 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log
 
 
-class TtyrecDatasetWorker(Configurable):
-    def __init__(self, cfg):
+class NetHackDataset(Configurable):
+    def __init__(self, cfg, threadpool):
         super().__init__(cfg)
 
-        self.idx = 0
-        self.dataset_num_splits = cfg.dataset_num_splits
-        self.device = torch.device("cpu" if cfg.device == "cpu" else "cuda")
-        self.threadpool = ThreadPoolExecutor(max_workers=self.cfg.dataset_num_workers)
+        self.threadpool = threadpool
 
         self.dataset_batch_size = cfg.dataset_batch_size // cfg.dataset_rollout
         self.dataset = load_nld_dataset(
@@ -35,58 +32,50 @@ class TtyrecDatasetWorker(Configurable):
             dataset_deep=cfg.dataset_deep,
         )
 
-        env = create_env(cfg.env, cfg=cfg)
-        obs = env.reset()
+        self.env = create_env(cfg.env, cfg=cfg)
+        obs = self.env.reset()
 
         embed_actions = torch.zeros((256, 1))
-        for i, a in enumerate(env.actions):
+        for i, a in enumerate(self.env.actions):
             embed_actions[a.value][0] = i
         self.embed_actions = torch.nn.Embedding.from_pretrained(embed_actions)
-        self.embed_actions = self.embed_actions.to(self.device)
-        self.char_array = np.ascontiguousarray(env.char_array)
+        self.char_array = np.ascontiguousarray(self.env.char_array)
         self.crop_dim = cfg.crop_dim
 
         self.dataset_warmup = cfg.dataset_warmup
         self.prev_action_shape = (self.dataset_batch_size, cfg.dataset_rollout)
         self.screen_shape = self.prev_action_shape + obs[0]["screen_image"].shape
 
-        self._iterators = []
-        self._results = []
-        for _ in range(self.dataset_num_splits):
-            it = self.make_single_iter(self.dataset)
-            self._iterators.append(it)
-            self._results.append(self.threadpool.submit(next, it))
-
-    def result(self):
-        return self._results[self.idx].result()
-
-    def step(self):
-        fut = self.threadpool.submit(next, self._iterators[self.idx])
-        self._results[self.idx] = fut
-        self.idx = (self.idx + 1) % self.dataset_num_splits
+        obs_spaces = {
+            "prev_action": self.env.action_space,
+            "actions_converted": self.env.action_space,
+            "dones": gym.spaces.Discrete(2),
+        }
+        obs_spaces.update(
+            [
+                (k, self.env.observation_space[k])
+                for k in self.env.observation_space
+                if k not in ["message", "blstats"]  # our dataset doesn't contain those keys
+            ]
+        )
+        self.observation_space = gym.spaces.Dict(obs_spaces)
+        self.action_space = self.env.action_space
 
     def make_single_iter(self, dataset):
         def _iter():
-            mb_tensors = {
-                "screen_image": torch.zeros(self.screen_shape, dtype=torch.uint8),
-                "prev_action": torch.zeros(self.prev_action_shape, dtype=torch.uint8),
+            prev_action = np.zeros((self.dataset_batch_size, 1), dtype=np.uint8)
+            prev_mb = {
+                key: np.zeros((self.dataset_batch_size, 1, *obs_space.shape), dtype=np.uint8)
+                for key, obs_space in self.observation_space.items()
             }
-
-            prev_action = torch.zeros((self.dataset_batch_size, 1), dtype=torch.uint8).to(self.device)
             while True:
                 for i, mb in enumerate(dataset):
-                    if i == 0:
-                        # create torch tensors from first minibatch
-                        screen_image = mb_tensors["screen_image"].numpy()
-                        for k, array in mb.items():
-                            mb_tensors[k] = torch.from_numpy(array)
-                        [v.pin_memory() for v in mb_tensors.values()]
-
                     if i < self.dataset_warmup:
                         continue
 
-                    cursor_uint8 = mb["tty_cursor"].astype(np.uint8)
                     # flake8: noqa
+                    screen_image = np.zeros(self.screen_shape, dtype=np.uint8)
+                    cursor_uint8 = mb["tty_cursor"].astype(np.uint8)
                     convert = lambda i: render_utils.render_crop(
                         mb["tty_chars"][i],
                         mb["tty_colors"][i],
@@ -98,25 +87,29 @@ class TtyrecDatasetWorker(Configurable):
                     list(self.threadpool.map(convert, range(self.dataset_batch_size)))
 
                     final_mb = {
-                        "tty_chars": mb_tensors["tty_chars"],
-                        "tty_colors": mb_tensors["tty_colors"],
-                        "tty_cursor": torch.from_numpy(cursor_uint8),
-                        "screen_image": mb_tensors["screen_image"],
-                        "dones": mb_tensors["done"].bool(),
-                        "mask": torch.ones_like(mb_tensors["timestamps"]).bool(),
+                        "tty_chars": mb["tty_chars"],
+                        "tty_colors": mb["tty_colors"],
+                        "tty_cursor": cursor_uint8,
+                        "screen_image": screen_image,
+                        "dones": mb["done"].astype(bool),
                     }
 
-                    if "keypresses" in mb_tensors:
-                        actions = mb_tensors["keypresses"].long().to(self.device)
-                        actions_converted = self.embed_actions(actions).squeeze(-1).long()
+                    if "keypresses" in mb:
+                        actions = mb["keypresses"].astype(int)
+                        actions_converted = (
+                            self.embed_actions(torch.from_numpy(actions)).squeeze(-1).numpy().astype(np.uint8)
+                        )
                         final_mb["actions_converted"] = actions_converted
-                        final_mb["prev_action"] = torch.cat([prev_action, actions_converted[:, :-1]], dim=1)
+                        final_mb["prev_action"] = np.concatenate([prev_action, actions_converted[:, :-1]], axis=1)
                         prev_action = actions_converted[:, -1:]
 
-                    # DATASET is: [B T ...] but MODEL expects [T B ...]
-                    data = {k: t.transpose(0, 1).to(self.device) for k, t in final_mb.items()}
+                    # we need to allocate an extra rollout step here to calculate the value estimates for the last step
+                    for key in final_mb.keys():
+                        prev_obs = prev_mb[key]
+                        final_mb[key] = np.concatenate([prev_obs, final_mb[key]], axis=1)
+                        prev_mb[key] = final_mb[key][:, -1:]
 
-                    yield data
+                    yield final_mb
 
         return iter(_iter())
 

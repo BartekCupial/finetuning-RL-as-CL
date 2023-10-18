@@ -2,6 +2,7 @@ from typing import Optional
 
 from nle.env.tasks import NetHackScore
 
+from sf_examples.nethack.datasets.env import NetHackTtyrec
 from sf_examples.nethack.utils.tasks import (
     NetHackChallenge,
     NetHackEat,
@@ -22,6 +23,7 @@ NETHACK_ENVS = dict(
     eat=NetHackEat,
     scout=NetHackScout,
     challenge=NetHackChallenge,
+    dataset=NetHackTtyrec,
 )
 
 
@@ -73,7 +75,10 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
     if cfg.state_counter is not None:
         kwargs.update(state_counter=cfg.state_counter)
 
-    env = env_class(**kwargs)
+    if env_name == "dataset":
+        env = env_class(cfg, **kwargs)
+    else:
+        env = env_class(**kwargs)
 
     if cfg.add_image_observation:
         env = RenderCharImagesWithNumpyWrapperV2(

@@ -109,9 +109,3 @@ class KickStarter(nn.Module):
         student_outputs[self._k + "action_logits"] = teacher_outputs["action_logits"]
 
         return student_outputs
-
-    # def policy_output_shapes(self, num_actions, num_action_distribution_parameters) -> List[Tuple[str, List]]:
-    #     # policy outputs, this matches the expected output of the actor-critic
-    #     policy_outputs = self.student.policy_output_shapes(num_actions, num_action_distribution_parameters)
-    #     policy_outputs.append((self._k + "action_logits", [num_action_distribution_parameters]))
-    #     return policy_outputs
