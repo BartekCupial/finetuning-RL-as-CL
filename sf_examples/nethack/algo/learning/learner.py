@@ -49,6 +49,7 @@ class DatasetLearner(Learner):
         self.dataset_training_batches = []
 
         self.supervised_loss_func: Optional[Callable] = None
+        self.distillation_loss_func: Optional[Callable] = None
         self.kickstarting_loss_func: Optional[Callable] = None
 
     def init(self) -> InitModelData:
@@ -74,18 +75,61 @@ class DatasetLearner(Learner):
                 self.dataset_last_rnn_states.append(rnn_states)
                 self.dataset_training_batches.append(training_batch)
 
-        if self.cfg.supervised_loss_coeff == 0.0:
-            self.supervised_loss_func = lambda mb_results, mb, num_invalids: 0.0
-        else:
-            assert self.cfg.use_dataset
-            self.supervised_loss_func = self._supervised_loss
+        use_supervised_loss = self.cfg.supervised_loss_coeff > 0.0
+        use_distillation_loss = self.cfg.distillation_loss_coeff > 0.0
+        use_kickstarting_loss = self.cfg.kickstarting_loss_coeff > 0.0
 
-        if self.cfg.kickstarting_loss_coeff == 0.0:
-            self.kickstarting_loss_func = lambda mb, valids, num_invalids: 0.0
-        else:
-            self.kickstarting_loss_func = self._kickstarting_loss
+        assert (
+            sum(
+                [
+                    use_supervised_loss,
+                    use_distillation_loss,
+                    use_kickstarting_loss,
+                ]
+            )
+            <= 1
+        ), "only one regularization loss allowed at the time"
+
+        assert (
+            use_supervised_loss or use_distillation_loss
+        ) == self.cfg.use_dataset, (
+            "If either 'use_supervised_loss' or 'use_distillation_loss' is true, then 'use_dataset' must also be true."
+        )
+
+        self.supervised_loss_func = self._supervised_loss if use_supervised_loss else lambda *_: 0.0
+        self.distillation_loss_func = self._distillation_loss if use_distillation_loss else lambda *_: 0.0
+        self.kickstarting_loss_func = self._kickstarting_loss if use_kickstarting_loss else lambda *_: 0.0
 
         return init_model_data
+
+    def _supervised_loss(self, mb_results, mb, num_invalids: int):
+        result = mb_results["result"]
+        valids = mb_results["valids"]
+        outputs = result["action_logits"]
+        targets = mb["normalized_obs"]["actions_converted"].reshape(-1).long()
+        supervised_loss = F.cross_entropy(outputs, targets)
+        supervised_loss = masked_select(supervised_loss, valids, num_invalids)
+        supervised_loss = supervised_loss.mean()
+        supervised_loss *= self.cfg.supervised_loss_coeff
+
+        return supervised_loss
+
+    def _distillation_loss(self, mb_results, mb, num_invalids: int):
+        result = mb_results["result"]
+        valids = mb_results["valids"]
+
+        distillation_loss = F.kl_div(
+            F.log_softmax(result["action_logits"], dim=-1),
+            F.log_softmax(result["kick_action_logits"], dim=-1),
+            log_target=True,
+            reduction="none",
+        )
+        distillation_loss = masked_select(distillation_loss, valids, num_invalids)
+        # reduction "batchmean", sum and divide with batch_size
+        distillation_loss = distillation_loss.sum() / len(valids)
+        distillation_loss *= self.cfg.distillation_loss_coeff
+
+        return distillation_loss
 
     def _kickstarting_loss(self, result, valids, num_invalids: int):
         kickstarting_loss = F.kl_div(
@@ -100,18 +144,6 @@ class DatasetLearner(Learner):
         kickstarting_loss *= self.cfg.kickstarting_loss_coeff
 
         return kickstarting_loss
-
-    def _supervised_loss(self, mb_results, mb, num_invalids):
-        result = mb_results["result"]
-        valids = mb_results["valids"]
-        outputs = result["action_logits"]
-        targets = mb["normalized_obs"]["actions_converted"].reshape(-1).long()
-        supervised_loss = F.cross_entropy(outputs, targets)
-        supervised_loss = masked_select(supervised_loss, valids, num_invalids)
-        supervised_loss = supervised_loss.mean()
-        supervised_loss *= self.cfg.supervised_loss_coeff
-
-        return supervised_loss
 
     def _sample_dataset_batch(self):
         batch = self.dataset_training_batches[self.dataset_idx]
@@ -132,6 +164,7 @@ class DatasetLearner(Learner):
 
                 normalized_obs = prepare_and_normalize_obs(actor_critic, obs)
                 rnn_states = ensure_torch_tensor(rnn_states).to(self.device).float()
+                batch["rnn_states"][:, 0] = rnn_states
 
             batch["obs"] = normalized_obs
             batch["dones"] = normalized_obs["dones"].bool()[:, :-1]
@@ -152,11 +185,10 @@ class DatasetLearner(Learner):
                     # not sure if this is the best practice, but this is what everybody seems to be doing
                     not_done = (1.0 - i_normalized_obs["dones"].float()).unsqueeze(-1)
                     batch["rnn_states"][:, i + 1] = policy_outputs["new_rnn_states"] * not_done
-                    batch[:, i] = policy_outputs
                     # we don't store new_rnn_states in buffer
                     del policy_outputs["new_rnn_states"]
-                    for key in policy_outputs.keys():
-                        batch[key][:, i] = policy_outputs[key]
+                    # store policy outputs in batch
+                    batch[:, i] = policy_outputs
 
         self.dataset_last_rnn_states[self.dataset_idx] = batch["rnn_states"][:, i + 1]
         self.dataset_idx = (self.dataset_idx + 1) % self.cfg.dataset_num_splits
@@ -325,15 +357,20 @@ class DatasetLearner(Learner):
                 values = torch.tensor([0.0]).to(self.device)
 
         with self.timing.add_time("regularizer_losses"):
-            kickstarting_loss = self.kickstarting_loss_func(
-                mb_results["result"],
-                mb_results["valids"],
-                num_invalids,
-            )
             supervised_loss = self.supervised_loss_func(
                 dataset_mb_results,
                 dataset_mb,
                 dataset_num_invalids,
+            )
+            distillation_loss = self.distillation_loss_func(
+                dataset_mb_results,
+                dataset_mb,
+                dataset_num_invalids,
+            )
+            kickstarting_loss = self.kickstarting_loss_func(
+                mb_results["result"],
+                mb_results["valids"],
+                num_invalids,
             )
 
         loss_summaries = dict(
@@ -345,9 +382,10 @@ class DatasetLearner(Learner):
             adv_std=adv_std,
             adv_mean=adv_mean,
         )
-        regularizer_loss = supervised_loss + kickstarting_loss
+        regularizer_loss = supervised_loss + distillation_loss + kickstarting_loss
         regularizer_loss_summaries = dict(
             supervised_loss=to_scalar(supervised_loss),
+            distillation_loss=to_scalar(distillation_loss),
             kickstarting_loss=to_scalar(kickstarting_loss),
         )
 

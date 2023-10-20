@@ -6,9 +6,9 @@ name = globals()["script"][:-3]
 config = {
     "env": "challenge",
     "exp_tags": [name],
-    "exp_point": "monk-APPO",
+    "exp_point": "monk-APPO-T",
     "train_for_env_steps": 2_000_000_000,
-    "group": "monk-APPO",
+    "group": "monk-APPO-T",
     "character": "mon-hum-neu-mal",
     "num_workers": 32,
     "num_envs_per_worker": 30,

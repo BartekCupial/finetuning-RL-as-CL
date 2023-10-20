@@ -44,12 +44,10 @@ def load_pretrained_checkpoint(model, checkpoint_dir, checkpoint_kind):
 def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: ActionSpace) -> ActorCritic:
     create_model = default_make_actor_critic_func
 
-    if cfg.kickstarting_loss_coeff == 0.0 and cfg.distilling_loss_coeff == 0.0:
-        model = create_model(cfg, obs_space, action_space)
-        if cfg.use_pretrained_checkpoint:
-            load_pretrained_checkpoint(model, cfg.model_path, cfg.load_checkpoint_kind)
-            log.debug("Loading model from pretrained checkpoint")
-    else:
+    use_distillation_loss = cfg.distillation_loss_coeff > 0.0
+    use_kickstarting_loss = cfg.kickstarting_loss_coeff > 0.0
+
+    if use_distillation_loss or use_kickstarting_loss:
         student = create_model(cfg, obs_space, action_space)
         if cfg.use_pretrained_checkpoint:
             load_pretrained_checkpoint(student, cfg.model_path, cfg.load_checkpoint_kind)
@@ -61,6 +59,11 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
 
         model = KickStarter(student, teacher, run_teacher_hs=cfg.run_teacher_hs)
         log.debug("Created kickstarter")
+    else:
+        model = create_model(cfg, obs_space, action_space)
+        if cfg.use_pretrained_checkpoint:
+            load_pretrained_checkpoint(model, cfg.model_path, cfg.load_checkpoint_kind)
+            log.debug("Loading model from pretrained checkpoint")
 
     return model
 

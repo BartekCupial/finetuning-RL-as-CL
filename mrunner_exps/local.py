@@ -6,9 +6,9 @@ name = globals()["script"][:-3]
 config = {
     "env": "challenge",
     "exp_tags": [name],
-    "exp_point": "monk-APPO-KS",
-    "train_for_env_steps": 2_000_000_000,
-    "group": "monk-APPO-KS",
+    "exp_point": "monk-APPO",
+    "train_for_env_steps": 100_000_000,
+    "group": "monk-APPO",
     "character": "mon-hum-neu-mal",
     "num_workers": 32,
     "num_envs_per_worker": 30,
@@ -22,15 +22,21 @@ config = {
     "wandb_project": "sf2_nethack",
     "wandb_group": "gmum",
     "with_wandb": True,
-    "kickstarting_loss_coeff": 0.05,
-    "teacher_path": "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/@-AA-BC/pretrained",
-    "run_teacher_hs": False,
 }
 
 # params different between exps
 params_grid = [
     {
-        "seed": list(range(5)),
+        "seed": list(range(1)),
+        "num_workers": [8],
+        "batch_size": [1024],
+        "dataset_batch_size": [2048],
+        "teacher_path": ["/home/bartek/Workspace/data/sf_checkpoints/monk-AA-BC/pretrained"],
+        "model_path": ["/home/bartek/Workspace/data/sf_checkpoints/monk-AA-BC/pretrained"],
+        "db_path": ["/home/bartek/Workspace/data/nethack/AA-taster/ttyrecs.db"],
+        # "serial_mode": [True],
+        "with_wandb": [False],
+        "restart_behavior": ["overwrite"],
     },
 ]
 

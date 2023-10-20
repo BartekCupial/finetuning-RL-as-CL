@@ -22,12 +22,13 @@ config = {
     "wandb_project": "sf2_nethack",
     "wandb_group": "gmum",
     "with_wandb": True,
+    "use_dataset": True,
     "db_path": "/ttyrecs/ttyrecs.db",
     "data_path": "/nle/nld-aa/nle_data",
     "dataset_name": "autoascend",
     "dataset_rollout": 32,
     "dataset_batch_size": 8192,  # this equals bs = 256, 256 * 32 = 8192
-    "supervised_loss_coeff": 0.2,
+    "supervised_loss_coeff": 0.5,
 }
 
 # params different between exps
