@@ -11,12 +11,13 @@ from sample_factory.train import run_rl
 from sample_factory.utils.typing import ActionSpace, Config, ObsSpace
 from sample_factory.utils.utils import log
 from sf_examples.nethack.algo.learning.learner import DatasetLearner
-from sf_examples.nethack.models.chaotic_dwarf import ChaoticDwarvenGPT5
+from sf_examples.nethack.models import MODELS_LOOKUP
 from sf_examples.nethack.models.kickstarter import KickStarter
 from sf_examples.nethack.nethack_params import (
     add_extra_params_general,
     add_extra_params_learner,
     add_extra_params_model,
+    add_extra_params_model_scaled,
     add_extra_params_nethack_env,
     nethack_override_defaults,
 )
@@ -30,8 +31,12 @@ def register_nethack_envs():
 
 def make_nethack_encoder(cfg: Config, obs_space: ObsSpace) -> Encoder:
     """Factory function as required by the API."""
-    # TODO: register more possible models, here we should use parameters for specifying which model we want to use
-    return ChaoticDwarvenGPT5(cfg, obs_space)
+    try:
+        model_cls = MODELS_LOOKUP[cfg.model]
+    except KeyError:
+        raise NotImplementedError("model=%s" % cfg.model) from None
+
+    return model_cls(cfg, obs_space)
 
 
 def load_pretrained_checkpoint(model, checkpoint_dir, checkpoint_kind):
@@ -83,6 +88,7 @@ def parse_nethack_args(argv=None, evaluation=False):
     parser, partial_cfg = parse_sf_args(argv=argv, evaluation=evaluation)
     add_extra_params_nethack_env(parser)
     add_extra_params_model(parser)
+    add_extra_params_model_scaled(parser)
     add_extra_params_learner(parser)
     add_extra_params_general(parser)
     nethack_override_defaults(partial_cfg.env, parser)

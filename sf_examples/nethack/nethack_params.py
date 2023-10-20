@@ -27,7 +27,28 @@ def add_extra_params_model(parser):
     """
     # TODO: add help
     p = parser
-    p.add_argument("--use_tty_only", type=str, default=True)
+    p.add_argument("--use_tty_only", type=bool, default=True)
+    p.add_argument("--use_prev_action", type=bool, default=False)
+
+
+def add_extra_params_model_scaled(parser):
+    """
+    Specify any additional command line arguments for NetHack models.
+    """
+    # TODO: add help
+    p = parser
+    p.add_argument("--h_dim", type=int, default=1738)
+    p.add_argument("--msg_hdim", type=int, default=64)
+    p.add_argument("--color_edim", type=int, default=16)
+    p.add_argument("--char_edim", type=int, default=16)
+    p.add_argument("--use_crop", type=bool, default=True)
+    p.add_argument("--use_crop_norm", type=bool, default=True)
+    p.add_argument("--screen_kernel_size", type=int, default=3)
+    p.add_argument("--no_max_pool", type=bool, default=False)
+    p.add_argument("--screen_conv_blocks", type=int, default=2)
+    p.add_argument("--blstats_hdim", type=int, default=512)
+    p.add_argument("--fc_after_cnn_hdim", type=int, default=512)
+    p.add_argument("--use_resnet", type=bool, default=False)
 
 
 def add_extra_params_eval(parser):
@@ -69,6 +90,7 @@ def add_extra_params_general(parser):
     p.add_argument("--exp_point", type=str, default="point-A")
     p.add_argument("--group", type=str, default="group2")
     p.add_argument("--use_pretrained_checkpoint", type=str2bool, default=False)
+    p.add_argument("--model", type=str, default="ChaoticDwarvenGPT5")
     p.add_argument("--model_path", type=str, default=None)
     p.add_argument("--supervised_loss_coeff", type=float, default=0.0)
     p.add_argument("--kickstarting_loss_coeff", type=float, default=0.0)
@@ -83,7 +105,6 @@ def nethack_override_defaults(_env, parser):
     """RL params specific to NetHack envs."""
     # TODO:
     parser.set_defaults(
-        model="ChaoticDwarvenGPT5",
         use_record_episode_statistics=False,
         gamma=0.999,  # discounting
         num_workers=12,
