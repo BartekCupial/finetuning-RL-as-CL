@@ -6,12 +6,14 @@ import shutil
 import time
 from collections import OrderedDict, deque
 from os.path import isdir, join
+from pathlib import Path
 from typing import Any, Callable, Deque, Dict, List, Optional, Tuple
 
 import numpy as np
 from signal_slot.signal_slot import EventLoop, EventLoopObject, EventLoopStatus, Timer, process_name, signal
 from tensorboardX import SummaryWriter
 
+import wandb
 from sample_factory.algo.learning.batcher import Batcher
 from sample_factory.algo.learning.learner_worker import LearnerWorker
 from sample_factory.algo.sampling.sampler import AbstractSampler
@@ -44,6 +46,7 @@ from sample_factory.utils.utils import (
     memory_consumption_mb,
     save_git_diff,
     summaries_dir,
+    videos_dir,
 )
 from sample_factory.utils.wandb_utils import init_wandb
 
@@ -165,6 +168,7 @@ class Runner(EventLoopObject, Configurable):
 
         periodic(self.report_interval_sec, self._update_stats_and_print_report)
         periodic(self.summaries_interval_sec, self._report_experiment_summaries)
+        periodic(self.summaries_interval_sec, self._upload_videos)
 
         periodic(self.cfg.save_every_sec, self._save_policy)
         periodic(self.cfg.save_best_every_sec, self._save_best_policy)
@@ -440,6 +444,38 @@ class Runner(EventLoopObject, Configurable):
 
         for w in self.writers.values():
             w.flush()
+
+    def _upload_videos(self):
+        # normally we would upload videos with the wrapper which saves them
+        # but since environments are run as independent processes
+        # wandb.run returns None, we have to upload the videos from the main process (runner)
+        videos_folder_path = Path(videos_dir(self.cfg))
+        videos_folder_path.mkdir(exist_ok=True, parents=True)
+        uploaded_videos = set()
+
+        # Check if the uploaded_videos file exists
+        uploaded_videos_file = Path(videos_dir(self.cfg)) / "uploaded_videos.txt"
+        if uploaded_videos_file.exists():
+            with open(uploaded_videos_file, "r") as file:
+                uploaded_videos.update(file.read().splitlines())
+
+        # List all files in the folder
+        video_files = [f for f in videos_folder_path.iterdir() if f.exists() and f.suffix == ".mp4"]
+
+        # Iterate through video files and upload them if not already uploaded
+        for video_file in video_files:
+            video_path = str(video_file)
+
+            if video_path not in uploaded_videos:
+                # Use wandb API to log the video file
+                wandb.log({"video": wandb.Video(video_path, fps=30)}, step=self.env_steps[0])
+
+                # Add the video to the set of uploaded videos
+                uploaded_videos.add(video_path)
+
+        # Update the uploaded_videos file
+        with open(uploaded_videos_file, "w") as file:
+            file.write("\n".join(uploaded_videos))
 
     def _propagate_training_info(self):
         """

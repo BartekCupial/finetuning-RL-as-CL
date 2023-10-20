@@ -2,6 +2,7 @@ from typing import Optional
 
 from nle.env.tasks import NetHackScore
 
+from sample_factory.utils.utils import videos_dir
 from sf_examples.nethack.datasets.env import NetHackTtyrec
 from sf_examples.nethack.utils.tasks import (
     NetHackChallenge,
@@ -12,7 +13,7 @@ from sf_examples.nethack.utils.tasks import (
     NetHackStaircase,
     NetHackStaircasePet,
 )
-from sf_examples.nethack.utils.wrappers import RenderCharImagesWithNumpyWrapperV2
+from sf_examples.nethack.utils.wrappers import RecordAnsi, RenderCharImagesWithNumpyWrapperV2, RenderWrapper
 
 NETHACK_ENVS = dict(
     staircase=NetHackStaircase,
@@ -86,4 +87,13 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
             crop_size=cfg.crop_dim,
             rescale_font_size=(cfg.pixel_size, cfg.pixel_size),
         )
+
+    if render_mode:
+        env = RenderWrapper(env, render_mode)
+
+    if env_config:
+        if env_config["vector_index"] == 0 and env_config["worker_index"] == 0:
+            if cfg.capture_video:
+                env = RecordAnsi(env, videos_dir(cfg=cfg), episode_trigger=lambda t: t % cfg.capture_video_ith == 0)
+
     return env

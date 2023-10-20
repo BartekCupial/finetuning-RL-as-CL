@@ -408,6 +408,11 @@ def experiment_dir(cfg, mkdir=True) -> str:
     return maybe_ensure_dir_exists(join(experiments_root, experiment), mkdir)
 
 
+def videos_dir(cfg, mkdir=True) -> str:
+    videos_dir = join(experiment_dir(cfg, mkdir), "videos")
+    return ensure_dir_exists(videos_dir)
+
+
 def summaries_dir(experiment_dir_, mkdir=True) -> str:
     return maybe_ensure_dir_exists(join(experiment_dir_, ".summary"), mkdir)
 
