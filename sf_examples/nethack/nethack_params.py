@@ -84,7 +84,7 @@ def nethack_override_defaults(_env, parser):
     # TODO:
     parser.set_defaults(
         model="ChaoticDwarvenGPT5",
-        use_record_episode_statistics=True,
+        use_record_episode_statistics=False,
         gamma=0.999,  # discounting
         num_workers=12,
         num_envs_per_worker=2,
