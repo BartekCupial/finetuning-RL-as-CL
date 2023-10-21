@@ -10,7 +10,7 @@ config = {
     "train_for_env_steps": 2_000_000_000,
     "group": "monk-APPO-KLAA",
     "character": "mon-hum-neu-mal",
-    "num_workers": 32,
+    "num_workers": 16,
     "num_envs_per_worker": 30,
     "worker_num_splits": 2,
     "rollout": 32,
