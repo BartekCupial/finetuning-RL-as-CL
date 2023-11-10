@@ -50,6 +50,7 @@ class NetHackDataset(Configurable):
             "prev_action": self.env.action_space,
             "actions_converted": self.env.action_space,
             "dones": gym.spaces.Discrete(2),
+            "mask": gym.spaces.Discrete(2),
         }
         obs_spaces.update(
             [
@@ -92,6 +93,7 @@ class NetHackDataset(Configurable):
                         "tty_cursor": cursor_uint8,
                         "screen_image": screen_image,
                         "dones": mb["done"].astype(bool),
+                        "mask": np.ones_like(mb["done"]).astype(bool),
                     }
 
                     if "keypresses" in mb:

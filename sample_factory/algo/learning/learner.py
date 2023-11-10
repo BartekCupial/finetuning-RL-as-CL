@@ -948,7 +948,12 @@ class Learner(Configurable):
             valids: Tensor = buff["policy_id"] == self.policy_id
             # ignore experience that was older than the threshold even before training started
             curr_policy_version: int = self.train_step
-            buff["valids"][:, :-1] = valids & (curr_policy_version - buff["policy_version"] < self.cfg.max_policy_lag)
+            # by defaule buff["valids"] are true
+            buff["valids"][:, :-1] = (
+                buff["valids"][:, :-1]
+                & valids
+                & (curr_policy_version - buff["policy_version"] < self.cfg.max_policy_lag)
+            )
             # for last T+1 step, we want to use the validity of the previous step
             buff["valids"][:, -1] = buff["valids"][:, -2]
 

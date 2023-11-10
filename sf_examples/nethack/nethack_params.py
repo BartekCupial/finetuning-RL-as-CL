@@ -78,6 +78,7 @@ def add_extra_params_learner(parser):
     p.add_argument("--dataset_highscore", type=str2bool, default=False)
     p.add_argument("--dataset_midscore", type=str2bool, default=False)
     p.add_argument("--dataset_deep", type=str2bool, default=False)
+    p.add_argument("--dataset_shuffle", type=str2bool, default=True, help="for debugging purposes")
 
 
 def add_extra_params_general(parser):

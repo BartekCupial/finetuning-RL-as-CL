@@ -107,7 +107,7 @@ class DatasetLearner(Learner):
         valids = mb_results["valids"]
         outputs = result["action_logits"]
         targets = mb["normalized_obs"]["actions_converted"].reshape(-1).long()
-        supervised_loss = F.cross_entropy(outputs, targets)
+        supervised_loss = F.cross_entropy(outputs, targets, reduction="none")
         supervised_loss = masked_select(supervised_loss, valids, num_invalids)
         supervised_loss = supervised_loss.mean()
         supervised_loss *= self.cfg.supervised_loss_coeff
@@ -169,7 +169,7 @@ class DatasetLearner(Learner):
             batch["obs"] = normalized_obs
             batch["dones"] = normalized_obs["dones"].bool()[:, :-1]
             batch["policy_id"].fill_(self.policy_id)
-            batch["valids"].fill_(True)
+            batch["valids"] = normalized_obs["mask"].bool()
             # TODO: maybe also return rewards calculated based on scores
 
             with self.timing.add_time("forward"):
@@ -184,7 +184,9 @@ class DatasetLearner(Learner):
                     # reset next-step hidden states to zero if we encountered an episode boundary
                     # not sure if this is the best practice, but this is what everybody seems to be doing
                     not_done = (1.0 - i_normalized_obs["dones"].float()).unsqueeze(-1)
-                    batch["rnn_states"][:, i + 1] = policy_outputs["new_rnn_states"] * not_done
+                    batch["rnn_states"][:, i + 1] = (
+                        policy_outputs["new_rnn_states"] * not_done * i_normalized_obs["mask"].unsqueeze(-1)
+                    )
                     # we don't store new_rnn_states in buffer
                     del policy_outputs["new_rnn_states"]
                     # store policy outputs in batch
