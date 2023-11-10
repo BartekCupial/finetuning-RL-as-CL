@@ -288,6 +288,26 @@ class RenderCharImagesWithNumpyWrapperV2(gym.Wrapper):
         return self.env.render(mode=mode)
 
 
+class PrevActionWrapper(gym.Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self.prev_action = 0
+
+        obs_spaces = {"prev_action": self.env.action_space}
+        obs_spaces.update([(k, self.env.observation_space[k]) for k in self.env.observation_space])
+        self.observation_space = gym.spaces.Dict(obs_spaces)
+
+    def reset(self, **kwargs):
+        self.prev_action = 0
+        return self.env.reset(**kwargs)
+
+    def step(self, action):
+        obs, reward, done, info = self.env.step(action)
+        obs["prev_action"] = np.array([self.prev_action])
+        self.prev_action = action
+        return obs, reward, done, info
+
+
 class RenderWrapper(gym.Wrapper):
     def __init__(self, env: Env, render_mode: str = None):
         super().__init__(env)

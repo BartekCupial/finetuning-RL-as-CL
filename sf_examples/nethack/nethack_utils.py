@@ -13,7 +13,12 @@ from sf_examples.nethack.utils.tasks import (
     NetHackStaircase,
     NetHackStaircasePet,
 )
-from sf_examples.nethack.utils.wrappers import RecordAnsi, RenderCharImagesWithNumpyWrapperV2, RenderWrapper
+from sf_examples.nethack.utils.wrappers import (
+    PrevActionWrapper,
+    RecordAnsi,
+    RenderCharImagesWithNumpyWrapperV2,
+    RenderWrapper,
+)
 
 NETHACK_ENVS = dict(
     staircase=NetHackStaircase,
@@ -87,6 +92,9 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
             crop_size=cfg.crop_dim,
             rescale_font_size=(cfg.pixel_size, cfg.pixel_size),
         )
+
+    if cfg.use_prev_action:
+        env = PrevActionWrapper(env)
 
     if render_mode:
         env = RenderWrapper(env, render_mode)

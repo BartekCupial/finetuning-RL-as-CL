@@ -239,6 +239,7 @@ class ChaoticDwarvenGPT5(Encoder):
         self.encoders = nn.ModuleDict()
 
         self.use_tty_only = cfg.use_tty_only
+        self.use_prev_action = cfg.use_prev_action
 
         # screen encoder (TODO: could also use only tty_chars)
         pixel_size = cfg.pixel_size
@@ -261,11 +262,19 @@ class ChaoticDwarvenGPT5(Encoder):
             topline_shape = obs_space["message"].shape
             bottomline_shape = obs_space["blstats"].shape
 
+        if self.use_prev_action:
+            self.num_actions = obs_space["prev_action"].n
+            self.prev_actions_dim = self.num_actions
+        else:
+            self.num_actions = None
+            self.prev_actions_dim = 0
+
         self.encoder_out_size = sum(
             [
                 calc_num_elements(self.screen_encoder, screen_shape),
                 calc_num_elements(self.topline_encoder, topline_shape),
                 calc_num_elements(self.bottomline_encoder, bottomline_shape),
+                self.prev_actions_dim,
             ]
         )
 
@@ -284,6 +293,9 @@ class ChaoticDwarvenGPT5(Encoder):
             self.bottomline_encoder(bottom_line.float(memory_format=torch.contiguous_format).view(B, -1)),
             self.screen_encoder(obs_dict["screen_image"].float(memory_format=torch.contiguous_format).view(B, C, H, W)),
         ]
+
+        if self.use_prev_action:
+            encodings.append(torch.nn.functional.one_hot(obs_dict["prev_action"].long(), self.num_actions))
 
         return torch.cat(encodings, dim=1)
 

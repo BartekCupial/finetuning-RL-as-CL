@@ -27,8 +27,8 @@ def add_extra_params_model(parser):
     """
     # TODO: add help
     p = parser
-    p.add_argument("--use_tty_only", type=bool, default=True)
-    p.add_argument("--use_prev_action", type=bool, default=False)
+    p.add_argument("--use_tty_only", type=str2bool, default=True)
+    p.add_argument("--use_prev_action", type=str2bool, default=False)
 
 
 def add_extra_params_model_scaled(parser):
@@ -41,14 +41,14 @@ def add_extra_params_model_scaled(parser):
     p.add_argument("--msg_hdim", type=int, default=64)
     p.add_argument("--color_edim", type=int, default=16)
     p.add_argument("--char_edim", type=int, default=16)
-    p.add_argument("--use_crop", type=bool, default=True)
-    p.add_argument("--use_crop_norm", type=bool, default=True)
+    p.add_argument("--use_crop", type=str2bool, default=True)
+    p.add_argument("--use_crop_norm", type=str2bool, default=True)
     p.add_argument("--screen_kernel_size", type=int, default=3)
-    p.add_argument("--no_max_pool", type=bool, default=False)
+    p.add_argument("--no_max_pool", type=str2bool, default=False)
     p.add_argument("--screen_conv_blocks", type=int, default=2)
     p.add_argument("--blstats_hdim", type=int, default=512)
     p.add_argument("--fc_after_cnn_hdim", type=int, default=512)
-    p.add_argument("--use_resnet", type=bool, default=False)
+    p.add_argument("--use_resnet", type=str2bool, default=False)
 
 
 def add_extra_params_eval(parser):
