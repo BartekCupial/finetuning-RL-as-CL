@@ -118,29 +118,33 @@ class DatasetLearner(Learner):
         result = mb_results["result"]
         valids = mb_results["valids"]
 
+        # we want to be equivalent to reduction "batchmean",
+        # first we will sum div on every single distribution and leave the batch intact
+        # after masked_select we will average what is left
         distillation_loss = F.kl_div(
             F.log_softmax(result["action_logits"], dim=-1),
             F.log_softmax(result["kick_action_logits"], dim=-1),
             log_target=True,
             reduction="none",
-        )
+        ).sum(axis=1)
         distillation_loss = masked_select(distillation_loss, valids, num_invalids)
-        # reduction "batchmean", sum and divide with batch_size
-        distillation_loss = distillation_loss.sum() / len(valids)
+        distillation_loss = distillation_loss.mean()
         distillation_loss *= self.cfg.distillation_loss_coeff
 
         return distillation_loss
 
     def _kickstarting_loss(self, result, valids, num_invalids: int):
+        # we want to be equivalent to reduction "batchmean",
+        # first we will sum div on every single distribution and leave the batch intact
+        # after masked_select we will average what is left
         kickstarting_loss = F.kl_div(
             F.log_softmax(result["action_logits"], dim=-1),
             F.log_softmax(result["kick_action_logits"], dim=-1),
             log_target=True,
             reduction="none",
-        )
+        ).sum(axis=1)
         kickstarting_loss = masked_select(kickstarting_loss, valids, num_invalids)
-        # reduction "batchmean", sum and divide with batch_size
-        kickstarting_loss = kickstarting_loss.sum() / len(valids)
+        kickstarting_loss = kickstarting_loss.mean()
         kickstarting_loss *= self.cfg.kickstarting_loss_coeff
 
         return kickstarting_loss
