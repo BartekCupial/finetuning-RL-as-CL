@@ -24,7 +24,7 @@ class ScaledNet(Encoder):
         self.obs_keys = list(sorted(obs_space.keys()))  # always the same order
         self.encoders = nn.ModuleDict()
 
-        # self.use_prev_action = cfg.use_prev_action
+        self.use_prev_action = cfg.use_prev_action
         self.msg_hdim = cfg.msg_hdim
         self.h_dim = cfg.h_dim
         self.il_mode = False
@@ -106,17 +106,30 @@ class ScaledNet(Encoder):
             screen_conv_blocks=self.screen_conv_blocks,
         )
 
-        # self.prev_actions_dim = self.num_actions if self.use_prev_action else 0
+        if self.use_prev_action:
+            self.num_actions = obs_space["prev_action"].n
+            self.prev_actions_dim = self.num_actions
+        else:
+            self.num_actions = None
+            self.prev_actions_dim = 0
 
-        self.encoder_out_size = sum(
+        self.out_dim = sum(
             [
                 self.topline_encoder.msg_hdim,
                 self.bottomline_encoder.h_dim,
                 self.screen_encoder.h_dim,
-                # self.prev_actions_dim,
+                self.prev_actions_dim,
                 self.crop_out_dim,
             ]
         )
+
+        fc_layers = [nn.Linear(self.out_dim, self.h_dim), nn.ReLU()]
+        for _ in range(self.num_fc_layers - 1):
+            fc_layers.append(nn.Linear(self.h_dim, self.h_dim))
+            fc_layers.append(nn.ReLU())
+        self.fc = nn.Sequential(*fc_layers)
+
+        self.encoder_out_size = self.h_dim
 
     def get_out_size(self) -> int:
         return self.encoder_out_size
@@ -156,16 +169,14 @@ class ScaledNet(Encoder):
         encodings.append(self.screen_encoder(tty_chars, tty_colors))
 
         # Previous action encoding
-        # if self.use_prev_action:
-        #     encodings.append(
-        #         torch.nn.functional.one_hot(
-        #             obs_dict["prev_action"], self.num_actions
-        #         ).view(T * B, -1)
-        #     )
+        if self.use_prev_action:
+            encodings.append(torch.nn.functional.one_hot(obs_dict["prev_action"].long(), self.num_actions).view(B, -1))
 
         # Crop encoding
         if self.use_crop:
-            tty_cursor = tty_cursor.clone()  # very important! otherwise we'll mess with tty_cursor below
+            # very important! otherwise we'll mess with tty_cursor below
+            # uint8 is needed for -1 operation to work properly 0 -> 255
+            tty_cursor = tty_cursor.clone().to(torch.uint8)
             tty_cursor[:, 0] -= 1  # adjust y position for cropping below
             tty_cursor = tty_cursor.flip(-1)  # flip (y, x) to be (x, y)
             crop_tty_chars = self.crop(tty_chars[..., -1, :, :], tty_cursor)
@@ -175,7 +186,7 @@ class ScaledNet(Encoder):
             crop_obs = torch.cat([crop_chars, crop_colors], dim=-1)
             encodings.append(self.extract_crop_representation(crop_obs.permute(0, 3, 1, 2).contiguous()).view(B, -1))
 
-        encodings = torch.cat(encodings, dim=1)
+        encodings = self.fc(torch.cat(encodings, dim=1))
 
         return encodings
 

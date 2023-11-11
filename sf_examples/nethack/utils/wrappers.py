@@ -299,12 +299,14 @@ class PrevActionWrapper(gym.Wrapper):
 
     def reset(self, **kwargs):
         self.prev_action = 0
-        return self.env.reset(**kwargs)
+        obs = self.env.reset(**kwargs)
+        obs["prev_action"] = np.array([self.prev_action])
+        return obs
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
-        obs["prev_action"] = np.array([self.prev_action])
         self.prev_action = action
+        obs["prev_action"] = np.array([self.prev_action])
         return obs, reward, done, info
 
 
