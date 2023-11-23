@@ -58,8 +58,12 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
             load_pretrained_checkpoint(student, cfg.model_path, cfg.load_checkpoint_kind)
             log.debug("Loading student from pretrained checkpoint")
 
+        # because there can be some missing parameters in the teacher config
+        # we will get the default values and override the default_cfg with what teacher had in the config
         teacher_cfg = load_from_path(join(cfg.teacher_path, "config.json"))
-        teacher = create_model(teacher_cfg, obs_space, action_space)
+        default_cfg = parse_nethack_args(argv=[f"--env={cfg.env}"], evaluation=False)
+        default_cfg.__dict__.update(dict(teacher_cfg))
+        teacher = create_model(default_cfg, obs_space, action_space)
         load_pretrained_checkpoint(teacher, cfg.teacher_path, cfg.load_checkpoint_kind)
 
         model = KickStarter(student, teacher, run_teacher_hs=cfg.run_teacher_hs)
