@@ -56,6 +56,8 @@ class DatasetLearner(Learner):
         init_model_data = super().init()
 
         if self.cfg.use_dataset:
+            assert self.cfg.rollout == self.cfg.dataset_rollout
+
             self.dataset_rollout_worker = DatasetRolloutWorker(self.cfg)
             self.dataset_info = extract_dataset_info(self.dataset_rollout_worker.dataset, self.cfg)
 
@@ -109,8 +111,8 @@ class DatasetLearner(Learner):
         targets = mb["normalized_obs"]["actions_converted"].reshape(-1).long()
         supervised_loss = F.cross_entropy(outputs, targets, reduction="none")
         supervised_loss = masked_select(supervised_loss, valids, num_invalids)
-        supervised_loss = supervised_loss.mean()
         supervised_loss *= self.cfg.supervised_loss_coeff
+        supervised_loss = supervised_loss.mean()
 
         return supervised_loss
 
@@ -128,8 +130,8 @@ class DatasetLearner(Learner):
             reduction="none",
         ).sum(axis=1)
         distillation_loss = masked_select(distillation_loss, valids, num_invalids)
-        distillation_loss = distillation_loss.mean()
         distillation_loss *= self.cfg.distillation_loss_coeff
+        distillation_loss = distillation_loss.mean()
 
         return distillation_loss
 
@@ -144,14 +146,17 @@ class DatasetLearner(Learner):
             reduction="none",
         ).sum(axis=1)
         kickstarting_loss = masked_select(kickstarting_loss, valids, num_invalids)
-        kickstarting_loss = kickstarting_loss.mean()
         kickstarting_loss *= self.cfg.kickstarting_loss_coeff
+        kickstarting_loss = kickstarting_loss.mean()
 
         return kickstarting_loss
 
     def _sample_dataset_batch(self):
         batch = self.dataset_training_batches[self.dataset_idx]
         rnn_states = self.dataset_last_rnn_states[self.dataset_idx]
+        # TODO: do we want to keep hidden states between rollouts?
+        if self.cfg.reset_on_rollout_boundary == True:
+            rnn_states[:] = 0
         obs = self.dataset_rollout_worker.sample_batch(self.dataset_idx)
 
         with torch.no_grad():
