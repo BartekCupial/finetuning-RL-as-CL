@@ -12,7 +12,7 @@ from sample_factory.algo.utils.env_info import EnvInfo
 from sample_factory.algo.utils.misc import LEARNER_ENV_STEPS, POLICY_ID_KEY, STATS_KEY, TRAIN_STATS, memory_stats
 from sample_factory.algo.utils.model_sharing import ParameterServer
 from sample_factory.algo.utils.rl_utils import prepare_and_normalize_obs
-from sample_factory.algo.utils.shared_buffers import alloc_trajectory_tensors, init_tensor
+from sample_factory.algo.utils.shared_buffers import alloc_trajectory_tensors
 from sample_factory.algo.utils.tensor_dict import TensorDict
 from sample_factory.algo.utils.tensor_utils import ensure_torch_tensor
 from sample_factory.algo.utils.torch_utils import masked_select, synchronize, to_scalar
@@ -21,7 +21,6 @@ from sample_factory.utils.attr_dict import AttrDict
 from sample_factory.utils.typing import ActionDistribution, Config, InitModelData, PolicyID
 from sample_factory.utils.utils import log
 from sf_examples.nethack.algo.sampling.rollout_worker import DatasetRolloutWorker
-from sf_examples.nethack.datasets.dataset import TtyrecDatasetWorker
 from sf_examples.nethack.datasets.dataset_info import DatasetInfo, extract_dataset_info
 
 
@@ -59,34 +58,24 @@ class DatasetLearner(Learner):
         if self.cfg.use_dataset:
             assert self.cfg.rollout == self.cfg.dataset_rollout
 
-            # self.dataset_rollout_worker = DatasetRolloutWorker(self.cfg)
-            # self.dataset_info = extract_dataset_info(self.dataset_rollout_worker.dataset, self.cfg)
+            self.dataset_rollout_worker = DatasetRolloutWorker(self.cfg)
+            self.dataset_info = extract_dataset_info(self.dataset_rollout_worker.dataset, self.cfg)
 
-            # self.max_batches_to_accumulate = self.cfg.dataset_num_splits
+            self.max_batches_to_accumulate = self.cfg.dataset_num_splits
 
-            # for i in range(self.max_batches_to_accumulate):
-            #     rnn_size = get_rnn_size(self.cfg)
-            #     training_batch = alloc_trajectory_tensors(
-            #         self.dataset_info,
-            #         self.dataset_rollout_worker.dataset.dataset_batch_size,
-            #         self.cfg.dataset_rollout,
-            #         rnn_size,
-            #         self.device,
-            #         False,
-            #     )
-            #     rnn_states = torch.zeros_like(training_batch["rnn_states"][:, 0])
-            #     self.dataset_last_rnn_states.append(rnn_states)
-            #     self.dataset_training_batches.append(training_batch)
-
-            self.dataset = TtyrecDatasetWorker(self.cfg)
-            rnn_size = get_rnn_size(self.cfg)
-            sampling_device = "cpu"  # TODO: check if we can use gpu here
-            dataset_num_traj = self.cfg.dataset_batch_size // self.cfg.dataset_rollout
-            self.dataset_rnn_states = []
-            for _ in range(self.cfg.dataset_num_splits):
-                hs = init_tensor([dataset_num_traj], torch.float32, [rnn_size], sampling_device, False)
-                hs = torch.zeros_like(hs)
-                self.dataset_rnn_states.append(hs)
+            for i in range(self.max_batches_to_accumulate):
+                rnn_size = get_rnn_size(self.cfg)
+                training_batch = alloc_trajectory_tensors(
+                    self.dataset_info,
+                    self.dataset_rollout_worker.dataset.dataset_batch_size,
+                    self.cfg.dataset_rollout,
+                    rnn_size,
+                    self.device,
+                    False,
+                )
+                rnn_states = torch.zeros_like(training_batch["rnn_states"][:, 0])
+                self.dataset_last_rnn_states.append(rnn_states)
+                self.dataset_training_batches.append(training_batch)
 
         use_supervised_loss = self.cfg.supervised_loss_coeff > 0.0
         use_distillation_loss = self.cfg.distillation_loss_coeff > 0.0
@@ -162,48 +151,6 @@ class DatasetLearner(Learner):
 
         return kickstarting_loss
 
-    def _sample_dataset(self):
-        # TODO: split this code into pieces, for loop should be inside model, only keep the loss related stuff
-        dataset_mb = self.dataset.result()
-        idx = self.dataset.idx
-
-        obs = {
-            key: value
-            for key, value in dataset_mb.items()
-            if key in ["tty_chars", "tty_colors", "tty_cursor", "screen_image"]
-        }
-        normalized_obs = prepare_and_normalize_obs(self.actor_critic, obs)
-        dataset_mb["normalized_obs"] = normalized_obs
-
-        rnn_states = self.dataset_rnn_states[idx]
-        # TODO: do we want to keep hidden states between rollouts?
-        if self.cfg.reset_on_rollout_boundary:
-            rnn_states[:] = 0
-        rnn_states = ensure_torch_tensor(rnn_states).to(self.device).float()
-
-        dones = dataset_mb["dones"]
-        for i in range(len(dones)):
-            step_dones = dones[i]
-            # Reset rnn_state to zero whenever an episode ended
-            # Make sure it is broadcastable with rnn_states
-            rnn_states = rnn_states * (~step_dones).float().view(-1, 1)
-            step_normalized_obs = {key: value[i] for key, value in dataset_mb["normalized_obs"].items()}
-
-            policy_outputs = self.actor_critic(step_normalized_obs, rnn_states)
-            rnn_states = policy_outputs["new_rnn_states"]
-
-            for key, value in policy_outputs.items():
-                if key not in dataset_mb:
-                    dataset_mb[key] = []
-                dataset_mb[key].append(value)
-
-        for key in policy_outputs.keys():
-            dataset_mb[key] = torch.concatenate(dataset_mb[key])
-
-        # store rnn_states, for next rollout
-        self.dataset_rnn_states[idx] = rnn_states.detach()
-        return dataset_mb
-
     def _sample_dataset_batch(self):
         batch = self.dataset_training_batches[self.dataset_idx]
         rnn_states = self.dataset_last_rnn_states[self.dataset_idx]
@@ -229,9 +176,11 @@ class DatasetLearner(Learner):
                 batch["rnn_states"][:, 0] = rnn_states
 
             batch["obs"] = normalized_obs
-            batch["dones"] = normalized_obs["dones"].bool()[:, :-1]
-            batch["policy_id"].fill_(self.policy_id)
+            # skip first done since we want to align dones with the last state of each episode
+            # normally first observation is aquired through env.reset(), we should do the same for rewards
+            batch["dones"] = normalized_obs["dones"].bool()[:, 1:]
             batch["valids"] = normalized_obs["mask"].bool()
+            batch["policy_id"].fill_(self.policy_id)
             # TODO: maybe also return rewards calculated based on scores
 
             with self.timing.add_time("forward"):
@@ -243,12 +192,10 @@ class DatasetLearner(Learner):
                     # this workaround results from mismatch between policy_outputs["actions"] and batch["actions"]
                     # in normal code this is resolved with policy_output_tensor, which concatenates all policy_outputs
                     policy_outputs["actions"].unsqueeze_(-1)
-                    # reset next-step hidden states to zero if we encountered an episode boundary
+                    # reset next-step hidden states to zero if we encountered an episode boundary or if state is invalid
                     # not sure if this is the best practice, but this is what everybody seems to be doing
-                    not_done = (1.0 - i_normalized_obs["dones"].float()).unsqueeze(-1)
-                    batch["rnn_states"][:, i + 1] = (
-                        policy_outputs["new_rnn_states"] * not_done * i_normalized_obs["mask"].unsqueeze(-1)
-                    )
+                    not_done = ((1.0 - batch["dones"][:, i].float()) * batch["valids"][:, i].float()).unsqueeze(-1)
+                    batch["rnn_states"][:, i + 1] = policy_outputs["new_rnn_states"] * not_done
                     # we don't store new_rnn_states in buffer
                     del policy_outputs["new_rnn_states"]
                     # store policy outputs in batch
@@ -421,37 +368,11 @@ class DatasetLearner(Learner):
                 values = torch.tensor([0.0]).to(self.device)
 
         with self.timing.add_time("regularizer_losses"):
-            dataset_mb = self._sample_dataset()
-            outputs = dataset_mb["action_logits"]
-            targets = dataset_mb["actions_converted"].reshape(-1)
-            supervised_loss = F.cross_entropy(outputs, targets)
-            supervised_loss *= self.cfg.supervised_loss_coeff
-            # supervised_loss2 = torch.stack(torch.chunk(supervised_loss2, self.cfg.dataset_rollout))[:-1]
-
-            # supervised_loss2 = supervised_loss2.mean()
-
-            # result = dataset_mb_results["result"]
-            # outputs = result["action_logits"]
-            # targets = dataset_mb["normalized_obs"]["actions_converted"].reshape(-1).long()
-            # supervised_loss = F.cross_entropy(outputs, targets, reduction="none")
-            # supervised_loss = torch.stack(torch.chunk(supervised_loss, self.dataset.dataset.batch_size))[:, 1:]
-            # supervised_loss *= self.cfg.supervised_loss_coeff
-            # supervised_loss = supervised_loss.mean()
-            # print("")
-            # print(supervised_loss2)
-            # print(supervised_loss)
-
-            # # print(torch.stack(torch.chunk(targets2, self.cfg.dataset_rollout))[:-1].T)
-            # # print(torch.stack(torch.chunk(targets, self.dataset.dataset.batch_size))[:, 1:])
-            # print((torch.stack(torch.chunk(targets, self.dataset.dataset.batch_size))[:, 1:] == torch.stack(torch.chunk(targets2, self.cfg.dataset_rollout))[:-1].T).all())
-            # print((torch.stack(torch.chunk(dataset_mb["normalized_obs"]["tty_cursor"], self.dataset.dataset.batch_size))[:, 1:] == torch.stack(torch.chunk(dataset_mb2["tty_cursor"].reshape(-1, 2), self.cfg.dataset_rollout))[:-1].float().permute(1, 0, 2)).all())
-            # print("")
-
-            # supervised_loss = self.supervised_loss_func(
-            #     dataset_mb_results,
-            #     dataset_mb,
-            #     dataset_num_invalids,
-            # )
+            supervised_loss = self.supervised_loss_func(
+                dataset_mb_results,
+                dataset_mb,
+                dataset_num_invalids,
+            )
             distillation_loss = self.distillation_loss_func(
                 dataset_mb_results,
                 dataset_mb,
@@ -478,7 +399,7 @@ class DatasetLearner(Learner):
             distillation_loss=to_scalar(distillation_loss),
             kickstarting_loss=to_scalar(kickstarting_loss),
         )
-        self.dataset.step()
+
         return (
             action_distribution,
             policy_loss,
@@ -693,8 +614,7 @@ class DatasetLearner(Learner):
             self._maybe_load_policy()
 
         with self.timing.add_time("sample_dataset_batch"):
-            # dataset_batch = self._sample_dataset_batch() if self.cfg.use_dataset else None
-            dataset_batch = None
+            dataset_batch = self._sample_dataset_batch() if self.cfg.use_dataset else None
 
         with self.timing.add_time("prepare_batch"):
             buff, experience_size, num_invalids = self._prepare_batch(batch)
