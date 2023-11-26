@@ -21,9 +21,10 @@ def get_rnn_size(cfg):
         # actor and critic need separate states
         size *= 2
 
-    if cfg.kickstarting_loss_coeff != 0.0 or cfg.distillation_loss_coeff != 0.0:
-        # teacher and student need separate states
-        size *= 2
+    if "kickstarting_loss_coeff" in cfg or "distillation_loss_coeff" in cfg:
+        if cfg.kickstarting_loss_coeff != 0.0 or cfg.distillation_loss_coeff != 0.0:
+            # teacher and student need separate states
+            size *= 2
 
     return size
 
