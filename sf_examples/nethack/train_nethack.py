@@ -13,6 +13,7 @@ from sample_factory.utils.utils import log
 from sf_examples.nethack.algo.learning.learner import DatasetLearner
 from sf_examples.nethack.models import MODELS_LOOKUP
 from sf_examples.nethack.models.kickstarter import KickStarter
+from sf_examples.nethack.nethack_env import NETHACK_ENVS, make_nethack_env
 from sf_examples.nethack.nethack_params import (
     add_extra_params_general,
     add_extra_params_learner,
@@ -21,7 +22,6 @@ from sf_examples.nethack.nethack_params import (
     add_extra_params_nethack_env,
     nethack_override_defaults,
 )
-from sf_examples.nethack.nethack_utils import NETHACK_ENVS, make_nethack_env
 
 
 def register_nethack_envs():

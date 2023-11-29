@@ -14,10 +14,12 @@ from sf_examples.nethack.utils.tasks import (
     NetHackStaircasePet,
 )
 from sf_examples.nethack.utils.wrappers import (
+    BlstatsInfoWrapper,
     PrevActionWrapper,
     RecordAnsi,
     RenderCharImagesWithNumpyWrapperV2,
     RenderWrapper,
+    TaskRewardsInfoWrapper,
 )
 
 NETHACK_ENVS = dict(
@@ -95,6 +97,10 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
 
     if cfg.use_prev_action:
         env = PrevActionWrapper(env)
+
+    if cfg.add_stats_to_info:
+        env = BlstatsInfoWrapper(env)
+        env = TaskRewardsInfoWrapper(env)
 
     if render_mode:
         env = RenderWrapper(env, render_mode)
