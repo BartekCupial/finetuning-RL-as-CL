@@ -58,6 +58,10 @@ def init_wandb(cfg):
     wandb.define_metric("train/env_steps")
     wandb.define_metric("train/*", step_metric="train/env_steps")
     wandb.define_metric("perf/*", step_metric="train/env_steps")
+    wandb.define_metric("len/*", step_metric="train/env_steps")
+    wandb.define_metric("policy_stats/*", step_metric="train/env_steps")
+    wandb.define_metric("reward/*", step_metric="train/env_steps")
+    wandb.define_metric("stats/*", step_metric="train/env_steps")
 
 
 def finish_wandb(cfg):
