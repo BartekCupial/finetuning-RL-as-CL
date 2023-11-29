@@ -2,6 +2,7 @@ from typing import Optional
 
 from nle.env.tasks import NetHackScore
 
+from sample_factory.algo.utils.gymnasium_utils import patch_non_gymnasium_env
 from sample_factory.utils.utils import videos_dir
 from sf_examples.nethack.datasets.env import NetHackTtyrec
 from sf_examples.nethack.utils.tasks import (
@@ -19,6 +20,7 @@ from sf_examples.nethack.utils.wrappers import (
     RecordAnsi,
     RenderCharImagesWithNumpyWrapperV2,
     RenderWrapper,
+    SeedActionSpaceWrapper,
     TaskRewardsInfoWrapper,
 )
 
@@ -87,6 +89,12 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
         env = env_class(cfg, **kwargs)
     else:
         env = env_class(**kwargs)
+
+    env = patch_non_gymnasium_env(env)
+
+    if cfg.serial_mode and cfg.num_workers == 1:
+        # full reproducability can only be achieved in serial mode and when there is only 1 worker
+        env = SeedActionSpaceWrapper(env)
 
     if cfg.add_image_observation:
         env = RenderCharImagesWithNumpyWrapperV2(

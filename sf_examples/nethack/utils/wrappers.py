@@ -30,16 +30,14 @@ import os
 import tempfile
 from collections import namedtuple
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable, SupportsFloat
 
 import cv2
-import gym
+import gymnasium as gym
 import imageio
 import numpy as np
 import render_utils
 from ansi2image.ansi2image import Ansi2Image
-from gym.core import Env
-from gym.wrappers import RecordVideo
 from nle import nethack
 from numba import njit
 from PIL import Image, ImageDraw, ImageFont
@@ -228,14 +226,14 @@ class RenderCharImagesWithNumpyWrapper(gym.Wrapper):
         return obs
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        obs, reward, terminated, truncated, info = super().step(action)
         obs = self._render_text_to_image(obs)
-        return obs, reward, done, info
+        return obs, reward, terminated, truncated, info
 
-    def reset(self):
-        obs = self.env.reset()
+    def reset(self, **kwargs):
+        obs, info = super().reset(**kwargs)
         obs = self._render_text_to_image(obs)
-        return obs
+        return obs, info
 
 
 class RenderCharImagesWithNumpyWrapperV2(gym.Wrapper):
@@ -290,18 +288,26 @@ class RenderCharImagesWithNumpyWrapperV2(gym.Wrapper):
         )
         obs["screen_image"] = screen
 
-    def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+    def step(self, action: Any) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
+        obs, reward, terminated, truncated, info = super().step(action)
         self._populate_obs(obs)
-        return obs, reward, done, info
+        return obs, reward, terminated, truncated, info
 
-    def reset(self):
-        obs = self.env.reset()
+    def reset(self, **kwargs):
+        obs, info = super().reset(**kwargs)
         self._populate_obs(obs)
-        return obs
+        return obs, info
 
-    def render(self, mode="human"):
-        return self.env.render(mode=mode)
+
+class SeedActionSpaceWrapper(gym.Wrapper):
+    """
+    To have reproducible decorrelate experience we need to seed action space
+    """
+
+    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
+        obs, info = super().reset(seed=seed, options=options)
+        self.action_space.seed(seed=seed)
+        return obs, info
 
 
 class PrevActionWrapper(gym.Wrapper):
@@ -315,15 +321,15 @@ class PrevActionWrapper(gym.Wrapper):
 
     def reset(self, **kwargs):
         self.prev_action = 0
-        obs = self.env.reset(**kwargs)
+        obs, info = super().reset(**kwargs)
         obs["prev_action"] = np.array([self.prev_action])
-        return obs
+        return obs, info
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        obs, reward, terminated, truncated, info = super().step(action)
         self.prev_action = action
         obs["prev_action"] = np.array([self.prev_action])
-        return obs, reward, done, info
+        return obs, reward, terminated, truncated, info
 
 
 class BlstatsInfoWrapper(gym.Wrapper):
@@ -331,12 +337,12 @@ class BlstatsInfoWrapper(gym.Wrapper):
         # because we will see done=True at the first timestep of the new episode
         # to properly calculate blstats at the end of the episode we need to keep the last_observation around
         last_observation = tuple(a.copy() for a in self.env.last_observation)
-        obs, reward, done, info = self.env.step(action)
+        obs, reward, terminated, truncated, info = super().step(action)
 
-        if done:
+        if terminated | truncated:
             info["episode_extra_stats"] = self.add_more_stats(info, last_observation)
 
-        return obs, reward, done, info
+        return obs, reward, terminated, truncated, info
 
     def add_more_stats(self, info, last_observation):
         extra_stats = info.get("episode_extra_stats", {})
@@ -355,7 +361,7 @@ class BlstatsInfoWrapper(gym.Wrapper):
 
 
 class TaskRewardsInfoWrapper(gym.Wrapper):
-    def __init__(self, env: Env):
+    def __init__(self, env: gym.Env):
         super().__init__(env)
 
         self.tasks = [
@@ -369,28 +375,28 @@ class TaskRewardsInfoWrapper(gym.Wrapper):
         ]
 
     def reset(self, **kwargs):
-        obs = super().reset(**kwargs)
+        obs, info = super().reset(**kwargs)
 
         for task in self.tasks:
             task.reset_score()
 
-        return obs
+        return obs, info
 
     def step(self, action):
         # use tuple and copy to avoid shallow copy (`last_observation` would be the same as `observation`)
         last_observation = tuple(a.copy() for a in self.env.last_observation)
-        obs, reward, done, info = super().step(action)
+        obs, reward, terminated, truncated, info = super().step(action)
         observation = tuple(a.copy() for a in self.env.last_observation)
         end_status = info["end_status"]
 
-        if done:
+        if terminated | truncated:
             info["episode_extra_stats"] = self.add_more_stats(info)
 
         # we will accumulate rewards for each step and log them when done signal appears
         for task in self.tasks:
             task.reward(self.env.unwrapped, last_observation, observation, end_status)
 
-        return obs, reward, done, info
+        return obs, reward, terminated, truncated, info
 
     def add_more_stats(self, info):
         extra_stats = info.get("episode_extra_stats", {})
@@ -399,16 +405,16 @@ class TaskRewardsInfoWrapper(gym.Wrapper):
 
 
 class RenderWrapper(gym.Wrapper):
-    def __init__(self, env: Env, render_mode: str = None):
+    def __init__(self, env: gym.Env, render_mode: str = None):
         super().__init__(env)
         self.render_mode = render_mode
 
     def render(self, mode=None, **kwargs):
         render_mode = mode if mode else self.render_mode
-        return self.env.render(render_mode, **kwargs)
+        return super().render(render_mode, **kwargs)
 
 
-class RecordAnsi(RecordVideo):
+class RecordAnsi(gym.wrappers.RecordVideo):
     def __init__(
         self,
         env,
