@@ -28,6 +28,7 @@ SOFTWARE.
 import json
 import os
 import tempfile
+from collections import namedtuple
 from pathlib import Path
 from typing import Callable
 
@@ -44,6 +45,15 @@ from numba import njit
 from PIL import Image, ImageDraw, ImageFont
 
 from sample_factory.huggingface.huggingface_utils import generate_replay_video
+from sf_examples.nethack.utils.task_rewards import (
+    EatingScore,
+    GoldScore,
+    ScoutScore,
+    SokobanfillpitScore,
+    SokobansolvedlevelsScore,
+    StaircasePetScore,
+    StaircaseScore,
+)
 
 SMALL_FONT_PATH = os.path.abspath("sf_examples/nethack/render_utils/Hack-Regular.ttf")
 
@@ -68,6 +78,12 @@ COLORS = [
     "#00FFFF",
     "#FFFFFF",
 ]
+
+
+BLStats = namedtuple(
+    "BLStats",
+    "x y strength_percentage strength dexterity constitution intelligence wisdom charisma score hitpoints max_hitpoints depth gold energy max_energy armor_class monster_level experience_level experience_points time hunger_state carrying_capacity dungeon_number level_number prop_mask align_bits",
+)
 
 
 @njit
@@ -308,6 +324,78 @@ class PrevActionWrapper(gym.Wrapper):
         self.prev_action = action
         obs["prev_action"] = np.array([self.prev_action])
         return obs, reward, done, info
+
+
+class BlstatsInfoWrapper(gym.Wrapper):
+    def step(self, action):
+        # because we will see done=True at the first timestep of the new episode
+        # to properly calculate blstats at the end of the episode we need to keep the last_observation around
+        last_observation = tuple(a.copy() for a in self.env.last_observation)
+        obs, reward, done, info = self.env.step(action)
+
+        if done:
+            info["episode_extra_stats"] = self.add_more_stats(info, last_observation)
+
+        return obs, reward, done, info
+
+    def add_more_stats(self, info, last_observation):
+        extra_stats = info.get("episode_extra_stats", {})
+        blstats = BLStats(*last_observation[self.env.unwrapped._blstats_index])
+        new_extra_stats = {
+            "score": blstats.score,
+            "turns": blstats.time,
+            "dlvl": blstats.depth,
+            "max_hitpoints": blstats.max_hitpoints,
+            "max_energy": blstats.max_energy,
+            "armor_class": blstats.armor_class,
+            "experience_level": blstats.experience_level,
+            "experience_points": blstats.experience_points,
+        }
+        return {**extra_stats, **new_extra_stats}
+
+
+class TaskRewardsInfoWrapper(gym.Wrapper):
+    def __init__(self, env: Env):
+        super().__init__(env)
+
+        self.tasks = [
+            EatingScore(),
+            GoldScore(),
+            ScoutScore(),
+            SokobanfillpitScore(),
+            # SokobansolvedlevelsScore(), # TODO: it could have bugs, for now turn off
+            StaircasePetScore(),
+            StaircaseScore(),
+        ]
+
+    def reset(self, **kwargs):
+        obs = super().reset(**kwargs)
+
+        for task in self.tasks:
+            task.reset_score()
+
+        return obs
+
+    def step(self, action):
+        # use tuple and copy to avoid shallow copy (`last_observation` would be the same as `observation`)
+        last_observation = tuple(a.copy() for a in self.env.last_observation)
+        obs, reward, done, info = super().step(action)
+        observation = tuple(a.copy() for a in self.env.last_observation)
+        end_status = info["end_status"]
+
+        if done:
+            info["episode_extra_stats"] = self.add_more_stats(info)
+
+        # we will accumulate rewards for each step and log them when done signal appears
+        for task in self.tasks:
+            task.reward(self.env.unwrapped, last_observation, observation, end_status)
+
+        return obs, reward, done, info
+
+    def add_more_stats(self, info):
+        extra_stats = info.get("episode_extra_stats", {})
+        new_extra_stats = {task.name: task.score for task in self.tasks}
+        return {**extra_stats, **new_extra_stats}
 
 
 class RenderWrapper(gym.Wrapper):
