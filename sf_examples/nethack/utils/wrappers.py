@@ -336,7 +336,7 @@ class BlstatsInfoWrapper(gym.Wrapper):
     def step(self, action):
         # because we will see done=True at the first timestep of the new episode
         # to properly calculate blstats at the end of the episode we need to keep the last_observation around
-        last_observation = tuple(a.copy() for a in self.env.last_observation)
+        last_observation = tuple(a.copy() for a in self.env.unwrapped.last_observation)
         obs, reward, terminated, truncated, info = super().step(action)
 
         if terminated | truncated:
@@ -384,9 +384,9 @@ class TaskRewardsInfoWrapper(gym.Wrapper):
 
     def step(self, action):
         # use tuple and copy to avoid shallow copy (`last_observation` would be the same as `observation`)
-        last_observation = tuple(a.copy() for a in self.env.last_observation)
+        last_observation = tuple(a.copy() for a in self.env.unwrapped.last_observation)
         obs, reward, terminated, truncated, info = super().step(action)
-        observation = tuple(a.copy() for a in self.env.last_observation)
+        observation = tuple(a.copy() for a in self.env.unwrapped.last_observation)
         end_status = info["end_status"]
 
         if terminated | truncated:
@@ -402,16 +402,6 @@ class TaskRewardsInfoWrapper(gym.Wrapper):
         extra_stats = info.get("episode_extra_stats", {})
         new_extra_stats = {task.name: task.score for task in self.tasks}
         return {**extra_stats, **new_extra_stats}
-
-
-class RenderWrapper(gym.Wrapper):
-    def __init__(self, env: gym.Env, render_mode: str = None):
-        super().__init__(env)
-        self.render_mode = render_mode
-
-    def render(self, mode=None, **kwargs):
-        render_mode = mode if mode else self.render_mode
-        return super().render(render_mode, **kwargs)
 
 
 class RecordAnsi(gym.wrappers.RecordVideo):

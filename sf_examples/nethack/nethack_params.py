@@ -56,6 +56,9 @@ def add_extra_params_eval(parser):
     Specify any additional command line arguments for NetHack evaluation.
     """
     # TODO: add help
+    p = parser
+    p.add_argument("--num_eval_rollouts", type=int, default=1024)
+    p.add_argument("--num_eval_workers", type=int, default=16)
 
 
 def add_extra_params_learner(parser):

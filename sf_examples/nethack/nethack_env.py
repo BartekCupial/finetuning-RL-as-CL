@@ -19,7 +19,6 @@ from sf_examples.nethack.utils.wrappers import (
     PrevActionWrapper,
     RecordAnsi,
     RenderCharImagesWithNumpyWrapperV2,
-    RenderWrapper,
     SeedActionSpaceWrapper,
     TaskRewardsInfoWrapper,
 )
@@ -92,6 +91,9 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
 
     env = patch_non_gymnasium_env(env)
 
+    if render_mode:
+        env.render_mode = render_mode
+
     if cfg.serial_mode and cfg.num_workers == 1:
         # full reproducability can only be achieved in serial mode and when there is only 1 worker
         env = SeedActionSpaceWrapper(env)
@@ -110,11 +112,8 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
         env = BlstatsInfoWrapper(env)
         env = TaskRewardsInfoWrapper(env)
 
-    if render_mode:
-        env = RenderWrapper(env, render_mode)
-
     if env_config:
-        if env_config["vector_index"] == 0 and env_config["worker_index"] == 0:
+        if env_config["env_id"] == 0:
             if cfg.capture_video:
                 env = RecordAnsi(env, videos_dir(cfg=cfg), episode_trigger=lambda t: t % cfg.capture_video_ith == 0)
 
