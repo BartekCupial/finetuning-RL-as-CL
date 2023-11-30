@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Optional
 
 from nle.env.tasks import NetHackScore
@@ -63,6 +64,24 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
         # "inv_oclasses",
     )
 
+    if cfg.gameloaddir:
+        # gameloaddir can be either list or a single path
+        if isinstance(cfg.gameloaddir, list):
+            # if gameloaddir is a list we will pick only one element from this list
+            if env_config:
+                # based on env_id
+                idx = len(cfg.gameloaddir) % env_config["env_id"]
+                gameloaddir = cfg.gameloaddir[idx]
+            else:
+                # if no env_id use first element
+                gameloaddir = cfg.gameloaddir[0]
+        else:
+            # if gameliaddir is a single path
+            assert isinstance(cfg.gameloaddir, (str, Path))
+            gameloaddir = cfg.gameloaddir
+    else:
+        gameloaddir = None
+
     kwargs = dict(
         character=cfg.character,
         max_episode_steps=cfg.max_episode_steps,
@@ -72,7 +91,7 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
         penalty_mode=cfg.fn_penalty_step,
         savedir=cfg.savedir,
         save_ttyrec_every=cfg.save_ttyrec_every,
-        gameloaddir=cfg.gameloaddir,
+        gameloaddir=gameloaddir,
     )
     if env_name == "challenge":
         kwargs["no_progress_timeout"] = 150
