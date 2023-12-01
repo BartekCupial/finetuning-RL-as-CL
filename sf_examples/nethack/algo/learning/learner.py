@@ -186,8 +186,7 @@ class DatasetLearner(Learner):
             with self.timing.add_time("forward"):
                 for i in range(seq_len):
                     rnn_state = batch["rnn_states"][:, i]
-                    i_normalized_obs = {key: value[:, i] for key, value in normalized_obs.items()}
-                    policy_outputs = actor_critic(i_normalized_obs, rnn_state)
+                    policy_outputs = actor_critic(normalized_obs[:, i], rnn_state)
                     policy_outputs["policy_version"] = torch.empty([num_samples]).fill_(self.train_step)
                     # this workaround results from mismatch between policy_outputs["actions"] and batch["actions"]
                     # in normal code this is resolved with policy_output_tensor, which concatenates all policy_outputs
