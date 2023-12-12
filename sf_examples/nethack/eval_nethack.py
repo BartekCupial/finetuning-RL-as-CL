@@ -315,8 +315,10 @@ class Rollout:
         self.done_q = mp.Manager().Queue()
 
         start_time = time.time()
-        for idx, seed in tqdm(enumerate(seeds), desc="Rollouts on GPU", unit="rollout"):
-            self._single_rollout(seed, idx, device)
+        with tqdm(total=self.cfg.num_eval_rollouts, desc="Rollouts on GPU", unit="rollout") as pbar:
+            for idx, seed in enumerate(seeds):
+                self._single_rollout(seed, idx, device)
+                pbar.update(1)
         wall_time = time.time() - start_time
 
         self._post_process(wall_time)
