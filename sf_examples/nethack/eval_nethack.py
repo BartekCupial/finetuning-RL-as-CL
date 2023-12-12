@@ -164,6 +164,11 @@ class Rollout:
         """
         Rollout and log relevant objects (observations, actions, returns).
         """
+        # looks like there are some racing conditions when I copy data e.g. torch.tensor(np.zeros(100, 100, 100))
+        # this operation is done inherently in sample factory, e.g. in `prepare_and_normalize_obs`
+        # setting `torch.set_num_threads(1)` fixes this issue since _single_rollout will only use one thread (and we wanted only one)
+        torch.set_num_threads(1)
+
         env = self._setup_env(seed, actor_num)
         cfg = self.cfg
         env_info = self.env_info
