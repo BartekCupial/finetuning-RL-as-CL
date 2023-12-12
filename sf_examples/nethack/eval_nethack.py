@@ -51,8 +51,8 @@ class Rollout:
         self.cfg = cfg
 
         # Load trained model config
-        cfg = load_from_checkpoint(cfg)
-        cfg.num_envs = 1
+        self.cfg = load_from_checkpoint(cfg)
+        self.cfg.num_envs = 1
 
         # initialize the Torch modules
         if self.cfg.seed is None:
