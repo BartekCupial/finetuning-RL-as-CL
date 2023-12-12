@@ -295,7 +295,8 @@ class ChaoticDwarvenGPT5(Encoder):
         ]
 
         if self.use_prev_action:
-            encodings.append(torch.nn.functional.one_hot(obs_dict["prev_action"].long(), self.num_actions))
+            prev_actions = obs_dict["prev_action"].long().view(B)
+            encodings.append(torch.nn.functional.one_hot(prev_actions, self.num_actions))
 
         return torch.cat(encodings, dim=1)
 
