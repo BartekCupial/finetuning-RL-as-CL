@@ -9,6 +9,7 @@ import pandas as pd
 import scipy.stats as stats
 import torch
 from torch import multiprocessing as mp
+from tqdm import tqdm
 
 from sample_factory.algo.learning.learner import Learner
 from sample_factory.algo.sampling.batched_sampling import preprocess_actions
@@ -120,19 +121,30 @@ class Rollout:
         # Get context
         ctx = mp.get_context("fork")
 
-        # Spawn first set of actors
-        for i in range(self.cfg.num_eval_workers):
-            actor = self._submit_actor(ctx, seeds[i], i)
-            actor_processes.append(actor)
-        i += 1
-
-        # Keep spawning new processes as old ones finish
-        while len(actor_processes) < self.cfg.num_eval_rollouts:
-            if not self.done_q.empty():
-                print(self.done_q.get())
+        with tqdm(total=self.cfg.num_eval_rollouts, desc="Rollouts on CPU", unit="rollout") as pbar:
+            # Spawn first set of actors
+            for i in range(self.cfg.num_eval_workers):
                 actor = self._submit_actor(ctx, seeds[i], i)
                 actor_processes.append(actor)
-                i += 1
+
+            i += 1
+
+            # Keep spawning new processes as old ones finish
+            while len(actor_processes) < self.cfg.num_eval_rollouts:
+                if not self.done_q.empty():
+                    _ = self.done_q.get()
+                    actor = self._submit_actor(ctx, seeds[i], i)
+                    actor_processes.append(actor)
+                    i += 1
+
+                # Update progress bar for each finished process
+                finished_processes = [p.is_alive() for p in actor_processes]
+                pbar.update(finished_processes.count(False) - pbar.n)
+
+            # update pbar when the last few processes that are still running finish
+            while any(finished_processes):
+                finished_processes = [p.is_alive() for p in actor_processes]
+                pbar.update(finished_processes.count(False) - pbar.n)
 
         # Wait for all actors to finish
         for actor in actor_processes:
@@ -218,6 +230,8 @@ class Rollout:
                 episode_reward += rew.float()
 
             num_frames += 1
+            # if num_frames % 100 == 0:
+            #     log.debug(f"Num frames {num_frames}...")
 
             dones = dones.cpu().numpy()
             for agent_i, done_flag in enumerate(dones):
@@ -301,7 +315,7 @@ class Rollout:
         self.done_q = mp.Manager().Queue()
 
         start_time = time.time()
-        for idx, seed in enumerate(seeds):
+        for idx, seed in tqdm(enumerate(seeds), desc="Rollouts on GPU", unit="rollout"):
             self._single_rollout(seed, idx, device)
         wall_time = time.time() - start_time
 
