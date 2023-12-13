@@ -57,8 +57,7 @@ def add_extra_params_eval(parser):
     """
     # TODO: add help
     p = parser
-    p.add_argument("--num_eval_rollouts", type=int, default=1024)
-    p.add_argument("--num_eval_workers", type=int, default=16)
+    p.add_argument("--sample_env_episodes", type=int, default=1024)
 
 
 def add_extra_params_learner(parser):
