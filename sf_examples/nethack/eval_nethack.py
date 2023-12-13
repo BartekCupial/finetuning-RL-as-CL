@@ -25,6 +25,8 @@ def main():  # pragma: no cover
     add_extra_params_general(parser)
     nethack_override_defaults(cfg.env, parser)
 
+    # important, instead of `load_from_checkpoint` as in enjoy we want
+    # to override it here to be able to use argv arguments
     checkpoint_override_defaults(cfg, parser)
 
     cfg = parse_full_cfg(parser)
