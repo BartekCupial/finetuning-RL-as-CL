@@ -9,7 +9,6 @@ config = {
     "exp_tags": [name],
     "character": "mon-hum-neu-mal",
     # "character": "@",
-    "decorrelate_envs_on_one_worker": False,
     "use_pretrained_checkpoint": False,
     "load_checkpoint_kind": "latest",
     "train_dir": "/home/bartek/Workspace/ideas/sample-factory/train_dir",
