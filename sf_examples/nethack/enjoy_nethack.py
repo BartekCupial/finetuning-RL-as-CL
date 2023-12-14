@@ -3,7 +3,6 @@ import sys
 from sample_factory.cfg.arguments import parse_full_cfg, parse_sf_args
 from sample_factory.enjoy import enjoy
 from sf_examples.nethack.nethack_params import (
-    add_extra_params_eval,
     add_extra_params_general,
     add_extra_params_learner,
     add_extra_params_model,
@@ -20,7 +19,6 @@ def main():  # pragma: no cover
     parser, cfg = parse_sf_args(evaluation=True)
     add_extra_params_nethack_env(parser)
     add_extra_params_model(parser)
-    add_extra_params_eval(parser)
     add_extra_params_learner(parser)
     add_extra_params_general(parser)
     nethack_override_defaults(cfg.env, parser)

@@ -51,15 +51,6 @@ def add_extra_params_model_scaled(parser):
     p.add_argument("--use_resnet", type=str2bool, default=False)
 
 
-def add_extra_params_eval(parser):
-    """
-    Specify any additional command line arguments for NetHack evaluation.
-    """
-    # TODO: add help
-    p = parser
-    p.add_argument("--sample_env_episodes", type=int, default=1024)
-
-
 def add_extra_params_learner(parser):
     """
     Specify any additional command line arguments for NetHack evaluation.
