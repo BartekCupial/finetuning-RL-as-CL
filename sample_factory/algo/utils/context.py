@@ -9,6 +9,7 @@ class SampleFactoryContext:
         self.env_registry = dict()
         self.model_factory = ModelFactory()
         from sample_factory.algo.learning.learner import Learner
+
         self.learner_cls = Learner
 
 
