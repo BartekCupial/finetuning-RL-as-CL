@@ -12,9 +12,8 @@ python -m sf_examples.nethack.scripts.convert_model \
 python -m sf_examples.nethack.scripts.convert_model \
     --env=challenge \
     --experiment=monk-AA-BC_pretrained_use_prev_action \
-    --model_source_path=/home/bartek/Workspace/data/sf_checkpoints/dungeons/monk-AA-BC/checkpoint.tar \
+    --model_source_path=/home/bartek/Workspace/data/sf_checkpoints/dungeons/monk-AA-BC_use_prev_action/checkpoint.tar \
     --use_prev_action=True
-
 
 python -m sf_examples.nethack.scripts.convert_model \
     --env=challenge \
