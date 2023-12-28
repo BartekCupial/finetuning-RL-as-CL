@@ -289,12 +289,6 @@ def load_from_path(filename: str) -> AttrDict:
 
 def checkpoint_override_defaults(cfg: Config, parser) -> AttrDict:
     cfg_filename = cfg_file(cfg)
-    cfg_filename_old = cfg_file_old(cfg)
-
-    if not os.path.isfile(cfg_filename) and os.path.isfile(cfg_filename_old):
-        # rename old config file
-        log.warning(f"Loading legacy config file {cfg_filename_old} instead of {cfg_filename}")
-        os.rename(cfg_filename_old, cfg_filename)
 
     if not os.path.isfile(cfg_filename):
         raise Exception(
@@ -309,3 +303,5 @@ def checkpoint_override_defaults(cfg: Config, parser) -> AttrDict:
         loaded_cfg = AttrDict(json_params)
 
     parser.set_defaults(**loaded_cfg)
+
+    return loaded_cfg

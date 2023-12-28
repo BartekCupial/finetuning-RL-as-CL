@@ -13,7 +13,7 @@ with open("README.md", "r") as f:
 
 
 _atari_deps = ["gymnasium[atari, accept-rom-license]"]
-_mujoco_deps = ["gymnasium[mujoco]", "mujoco<=2.3.3"]
+_mujoco_deps = ["gymnasium[mujoco]", "mujoco<2.5"]
 _envpool_deps = ["envpool"]
 _nethack_deps = [
     "numba ~= 0.58",
@@ -42,7 +42,7 @@ setup(
     description="High throughput asynchronous reinforcement learning framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    version="2.1.1",
+    version="2.1.2",
     url="https://github.com/alex-petrenko/sample-factory",
     author="Aleksei Petrenko",
     license="MIT",
@@ -67,6 +67,7 @@ setup(
         "opencv-python",
         "wandb>=0.12.9",
         "huggingface-hub>=0.10.0,<1.0",
+        "pandas",
     ],
     extras_require={
         # some tests require Atari and Mujoco so let's make sure dev environment has that

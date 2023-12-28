@@ -13,7 +13,7 @@
 
 # Sample Factory
 
-High-throughput reinforcement learning codebase. Version 2.0.0 is out! 🤗
+High-throughput reinforcement learning codebase. Version **2** is out! 🤗
 
 **Resources:**
 
@@ -31,11 +31,10 @@ High-throughput reinforcement learning codebase. Version 2.0.0 is out! 🤗
 
 ### What is Sample Factory?
 
-Sample Factory is one of the fastest RL libraries.
-We focused on very efficient synchronous and asynchronous implementations of policy gradients (PPO). 
+Sample Factory is one of the fastest RL libraries focused on very efficient synchronous and asynchronous implementations of policy gradients (PPO). 
 
-Sample Factory is thoroughly tested, used by many researchers and practitioners, and is actively maintained.
-Our implementation is known to reach SOTA performance in a variety of domains in a short amount of time.
+Sample Factory is thoroughly tested and used by many researchers and practitioners.
+Our implementation is known to reach state-of-the-art (SOTA) performance across a wide range of domains, while minimizing the required training time and hardware requirements.
 Clips below demonstrate ViZDoom, IsaacGym, DMLab-30, Megaverse, Mujoco, and Atari agents trained with Sample Factory:
 
 <p align="middle">
@@ -104,6 +103,9 @@ Stop the experiment (Ctrl+C) when the desired performance is reached and then ev
 
 ```bash
 python -m sf_examples.mujoco.enjoy_mujoco --env=mujoco_ant --experiment=Ant --train_dir=./train_dir
+
+# Or use an alternative eval script, no rendering but much faster! (use `sample_env_episodes` >= `num_workers` * `num_envs_per_worker`).
+python -m sf_examples.mujoco.fast_eval_mujoco --env=mujoco_ant --experiment=Ant --train_dir=./train_dir --sample_env_episodes=128 --num_workers=16 --num_envs_per_worker=2
 ```
 
 Do the same in a pixel-based VizDoom environment (might need to run `pip install sample-factory[vizdoom]`, please also see docs for VizDoom-specific instructions):
