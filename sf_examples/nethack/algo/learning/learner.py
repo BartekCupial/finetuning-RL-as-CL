@@ -1,5 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, Optional, Tuple
 
+import nle.dataset as nld
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -13,15 +15,17 @@ from sample_factory.algo.utils.misc import LEARNER_ENV_STEPS, POLICY_ID_KEY, STA
 from sample_factory.algo.utils.model_sharing import ParameterServer
 from sample_factory.algo.utils.rl_utils import prepare_and_normalize_obs
 from sample_factory.algo.utils.shared_buffers import alloc_trajectory_tensors
-from sample_factory.algo.utils.tensor_dict import TensorDict
+from sample_factory.algo.utils.tensor_dict import TensorDict, clone_tensordict, stack_tensordicts
 from sample_factory.algo.utils.tensor_utils import ensure_torch_tensor
 from sample_factory.algo.utils.torch_utils import masked_select, synchronize, to_scalar
 from sample_factory.model.model_utils import get_rnn_size
 from sample_factory.utils.attr_dict import AttrDict
 from sample_factory.utils.typing import ActionDistribution, Config, InitModelData, PolicyID
 from sample_factory.utils.utils import log
-from sf_examples.nethack.algo.sampling.rollout_worker import DatasetRolloutWorker
-from sf_examples.nethack.datasets.dataset_info import DatasetInfo, extract_dataset_info
+from sf_examples.nethack.datasets.actions import ACTION_MAPPING
+from sf_examples.nethack.datasets.dataset import load_nld_aa_large_dataset
+from sf_examples.nethack.datasets.render import render_screen_image
+from sf_examples.nethack.datasets.roles import Alignment, Race, Role
 
 
 class DatasetLearner(Learner):
@@ -41,12 +45,12 @@ class DatasetLearner(Learner):
             param_server,
         )
 
-        self.dataset_info: DatasetInfo = None
+        self.dataset: nld.TtyrecDataset = None
+        self.tp = None
 
-        self.dataset_idx = 0
-        self.dataset_rollout_worker = None
-        self.dataset_last_rnn_states = []
-        self.dataset_training_batches = []
+        self.rnn_states = None
+        self._iterators = None
+        self._results = None
 
         self.supervised_loss_func: Optional[Callable] = None
         self.distillation_loss_func: Optional[Callable] = None
@@ -58,24 +62,60 @@ class DatasetLearner(Learner):
         if self.cfg.use_dataset:
             assert self.cfg.rollout == self.cfg.dataset_rollout
 
-            self.dataset_rollout_worker = DatasetRolloutWorker(self.cfg)
-            self.dataset_info = extract_dataset_info(self.dataset_rollout_worker.dataset, self.cfg)
+            dataset_batch_size = self.cfg.dataset_batch_size // self.cfg.dataset_rollout
+            self.dataset = self._get_dataset()
+            self.tp = ThreadPoolExecutor(max_workers=self.cfg.dataset_num_workers)
 
-            self.max_batches_to_accumulate = self.cfg.dataset_num_splits
+            def _make_sing_iter(dataset):
+                dataset = iter(dataset)
 
-            for i in range(self.max_batches_to_accumulate):
-                rnn_size = get_rnn_size(self.cfg)
-                training_batch = alloc_trajectory_tensors(
-                    self.dataset_info,
-                    self.dataset_rollout_worker.dataset.dataset_batch_size,
-                    self.cfg.dataset_rollout,
-                    rnn_size,
-                    self.device,
-                    False,
-                )
-                rnn_states = torch.zeros_like(training_batch["rnn_states"][:, 0])
-                self.dataset_last_rnn_states.append(rnn_states)
-                self.dataset_training_batches.append(training_batch)
+                def _iter():
+                    prev_actions = np.zeros((dataset_batch_size, 1))
+                    prev_timestamps = np.ones((dataset_batch_size, 1)) * -1
+
+                    while True:
+                        batch = next(dataset)
+
+                        screen_image = render_screen_image(
+                            tty_chars=batch["tty_chars"],
+                            tty_colors=batch["tty_colors"],
+                            tty_cursor=batch["tty_cursor"],
+                            threadpool=self.tp,
+                        )
+                        batch["screen_image"] = screen_image
+                        batch["actions"] = ACTION_MAPPING[batch["keypresses"]]
+                        batch["prev_actions"] = np.concatenate([prev_actions, batch["actions"][:, :-1].copy()], axis=1)
+                        prev_actions = np.expand_dims(batch["actions"][:, -1].copy(), -1)
+
+                        # dones are broken in NLD-AA, so we just rewrite them with always done at last step
+                        # see: https://github.com/facebookresearch/nle/issues/355
+                        timestamp_diff = batch["timestamps"] - np.concatenate(
+                            [prev_timestamps, batch["timestamps"][:, :-1].copy()], axis=1
+                        )
+                        batch["done"][np.where(timestamp_diff != 1)] = 1
+                        prev_timestamps = np.expand_dims(batch["timestamps"][:, -1].copy(), -1)
+
+                        # ensure that we don't overrite data
+                        normalized_batch = prepare_and_normalize_obs(self.actor_critic, batch)
+                        normalized_batch = clone_tensordict(TensorDict(normalized_batch))
+
+                        yield normalized_batch
+
+                return iter(_iter())
+
+            self.rnn_states = [
+                torch.zeros((dataset_batch_size, get_rnn_size(self.cfg)), dtype=torch.float32, device=self.device)
+                for _ in range(self.cfg.dataset_num_splits)
+            ]
+            self.idx = 0
+            self.prev_idx = 0
+
+            self._iterators = []
+            self._results = []
+            for _ in range(self.cfg.dataset_num_splits):
+                it = _make_sing_iter(self.dataset)
+                self._iterators.append(it)
+                self._results.append(self.tp.submit(next, it))
 
         use_supervised_loss = self.cfg.supervised_loss_coeff > 0.0
         use_distillation_loss = self.cfg.distillation_loss_coeff > 0.0
@@ -104,32 +144,85 @@ class DatasetLearner(Learner):
 
         return init_model_data
 
+    def _get_dataset(self):
+        if self.cfg.character == "@":
+            role, race, align = None, None, None
+        else:
+            role, race, align = self.cfg.character.split("-")[:3]
+            role, race, align = Role(role), Race(race), Alignment(align)
+
+        dataset = load_nld_aa_large_dataset(
+            dataset_name=self.cfg.dataset_name,
+            data_path=self.cfg.data_path,
+            db_path=self.cfg.db_path,
+            seq_len=self.cfg.dataset_rollout,
+            batch_size=self.cfg.dataset_batch_size // self.cfg.dataset_rollout,
+            role=role,
+            race=race,
+            align=align,
+        )
+
+        return dataset
+
+    def result(self):
+        return self._results[self.idx].result()
+
+    def step(self):
+        fut = self.tp.submit(next, self._iterators[self.idx])
+        self._results[self.idx] = fut
+        self.prev_idx = self.idx
+        self.idx = (self.idx + 1) % self.cfg.dataset_num_splits
+
+    def _get_dataset_minibatch(self) -> TensorDict:
+        normalized_batch = self.result()
+        self.step()
+        return normalized_batch
+
+    def _calculate_dataset_outputs(self, mb: TensorDict):
+        rnn_state = self.rnn_states[self.prev_idx]
+
+        model_outputs = []
+        seq_len = mb["actions"].shape[1]
+        for i in range(seq_len):
+            # we split the forward since we want to use teacher from kickstarter
+            head_outputs = self.actor_critic.forward_head(mb[:, i])
+            core_outputs, new_rnn_state = self.actor_critic.forward_core(head_outputs, rnn_state)
+            outputs = self.actor_critic.forward_tail(core_outputs, values_only=False, sample_actions=False)
+
+            not_done = (1.0 - mb["done"][:, i].float()).unsqueeze(-1)
+            rnn_state = new_rnn_state * not_done
+            model_outputs.append(outputs)
+
+        # update rnn_states for next iteration
+        self.rnn_states[self.prev_idx] = rnn_state.detach()
+
+        model_outputs = stack_tensordicts(model_outputs, dim=1)
+
+        return model_outputs
+
     def _supervised_loss(self, mb_results, mb, num_invalids: int):
-        result = mb_results["result"]
-        valids = mb_results["valids"]
-        outputs = result["action_logits"]
-        targets = mb["normalized_obs"]["actions_converted"].reshape(-1).long()
+        outputs = mb_results["action_logits"].flatten(0, 1)
+        targets = mb["actions"].flatten(0, 1).long()
         supervised_loss = F.cross_entropy(outputs, targets, reduction="none")
-        supervised_loss = masked_select(supervised_loss, valids, num_invalids)
+        # supervised_loss = masked_select(supervised_loss, valids, num_invalids)
         supervised_loss *= self.cfg.supervised_loss_coeff
         supervised_loss = supervised_loss.mean()
 
         return supervised_loss
 
     def _distillation_loss(self, mb_results, mb, num_invalids: int):
-        result = mb_results["result"]
-        valids = mb_results["valids"]
-
+        outputs = mb_results["action_logits"].flatten(0, 1)
+        targets = mb_results["kick_action_logits"].flatten(0, 1)
         # we want to be equivalent to reduction "batchmean",
         # first we will sum div on every single distribution and leave the batch intact
         # after masked_select we will average what is left
         distillation_loss = F.kl_div(
-            F.log_softmax(result["action_logits"], dim=-1),
-            F.log_softmax(result["kick_action_logits"], dim=-1),
+            F.log_softmax(outputs, dim=-1),
+            F.log_softmax(targets, dim=-1),
             log_target=True,
             reduction="none",
         ).sum(axis=1)
-        distillation_loss = masked_select(distillation_loss, valids, num_invalids)
+        # distillation_loss = masked_select(distillation_loss, valids, num_invalids)
         distillation_loss *= self.cfg.distillation_loss_coeff
         distillation_loss = distillation_loss.mean()
 
@@ -150,60 +243,6 @@ class DatasetLearner(Learner):
         kickstarting_loss = kickstarting_loss.mean()
 
         return kickstarting_loss
-
-    def _sample_dataset_batch(self):
-        batch = self.dataset_training_batches[self.dataset_idx]
-        rnn_states = self.dataset_last_rnn_states[self.dataset_idx]
-        # TODO: do we want to keep hidden states between rollouts?
-        if self.cfg.reset_on_rollout_boundary:
-            rnn_states[:] = 0
-        obs = self.dataset_rollout_worker.sample_batch(self.dataset_idx)
-
-        with torch.no_grad():
-            with self.timing.add_time("stack"):
-                for key, x in obs.items():
-                    obs[key] = ensure_torch_tensor(x)
-
-            num_samples, seq_len = batch["rewards"].shape[0], batch["rewards"].shape[1]
-
-            with self.timing.add_time("obs_to_device_normalize"):
-                actor_critic = self.actor_critic
-                if actor_critic.training:
-                    actor_critic.eval()  # need to call this because we can be in serial mode
-
-                normalized_obs = prepare_and_normalize_obs(actor_critic, obs)
-                rnn_states = ensure_torch_tensor(rnn_states).to(self.device).float()
-                batch["rnn_states"][:, 0] = rnn_states
-
-            batch["obs"] = normalized_obs
-            # skip first done since we want to align dones with the last state of each episode
-            # normally first observation is aquired through env.reset(), we should do the same for rewards
-            batch["dones"] = normalized_obs["dones"].bool()[:, 1:]
-            batch["valids"] = normalized_obs["mask"].bool()
-            batch["policy_id"].fill_(self.policy_id)
-            # TODO: maybe also return rewards calculated based on scores
-
-            with self.timing.add_time("forward"):
-                for i in range(seq_len):
-                    rnn_state = batch["rnn_states"][:, i]
-                    policy_outputs = actor_critic(normalized_obs[:, i], rnn_state)
-                    policy_outputs["policy_version"] = torch.empty([num_samples]).fill_(self.train_step)
-                    # this workaround results from mismatch between policy_outputs["actions"] and batch["actions"]
-                    # in normal code this is resolved with policy_output_tensor, which concatenates all policy_outputs
-                    policy_outputs["actions"].unsqueeze_(-1)
-                    # reset next-step hidden states to zero if we encountered an episode boundary or if state is invalid
-                    # not sure if this is the best practice, but this is what everybody seems to be doing
-                    not_done = ((1.0 - batch["dones"][:, i].float()) * batch["valids"][:, i].float()).unsqueeze(-1)
-                    batch["rnn_states"][:, i + 1] = policy_outputs["new_rnn_states"] * not_done
-                    # we don't store new_rnn_states in buffer
-                    del policy_outputs["new_rnn_states"]
-                    # store policy outputs in batch
-                    batch[:, i] = policy_outputs
-
-        self.dataset_last_rnn_states[self.dataset_idx] = batch["rnn_states"][:, i + 1]
-        self.dataset_idx = (self.dataset_idx + 1) % self.cfg.dataset_num_splits
-
-        return batch
 
     def _compute_model_outputs(self, mb: TensorDict, num_invalids: int):
         with torch.no_grad(), self.timing.add_time("losses_init"):
@@ -323,8 +362,6 @@ class DatasetLearner(Learner):
         self,
         mb: AttrDict,
         num_invalids: int,
-        dataset_mb: Optional[AttrDict] = None,
-        dataset_num_invalids: Optional[AttrDict] = None,
     ) -> Tuple[ActionDistribution, Tensor, Tensor | float, Optional[Tensor], Tensor | float, Tensor, Dict]:
         # PPO clipping
         clip_ratio_high = 1.0 + self.cfg.ppo_clip_ratio  # e.g. 1.1
@@ -335,8 +372,6 @@ class DatasetLearner(Learner):
         mb_results = self._compute_model_outputs(mb, num_invalids)
         # we want action distribution (last) of the same shape as mb
         action_distribution = self.actor_critic.action_distribution()
-
-        dataset_mb_results = self._compute_model_outputs(dataset_mb, dataset_num_invalids) if dataset_mb else None
 
         with self.timing.add_time("losses"):
             if not self.cfg.behavioral_clone:
@@ -367,6 +402,11 @@ class DatasetLearner(Learner):
                 values = torch.tensor([0.0]).to(self.device)
 
         with self.timing.add_time("regularizer_losses"):
+            if self.cfg.use_dataset:
+                dataset_mb = self._get_dataset_minibatch()
+                dataset_mb_results = self._calculate_dataset_outputs(dataset_mb)
+                dataset_num_invalids = 0
+
             supervised_loss = self.supervised_loss_func(
                 dataset_mb_results,
                 dataset_mb,
@@ -417,10 +457,6 @@ class DatasetLearner(Learner):
         batch_size: int,
         experience_size: int,
         num_invalids: int,
-        ds_gpu_buffer: Optional[TensorDict] = None,
-        ds_batch_size: Optional[int] = None,
-        ds_experience_size: Optional[int] = None,
-        ds_num_invalids: Optional[int] = None,
     ) -> Optional[AttrDict]:
         timing = self.timing
         with torch.no_grad():
@@ -462,22 +498,16 @@ class DatasetLearner(Learner):
 
                 force_summaries = False
                 minibatches = self._get_minibatches(batch_size, experience_size)
-                ds_minibatches = (
-                    self._get_minibatches(ds_batch_size, ds_experience_size) if ds_experience_size else None
-                )
 
             for batch_num in range(len(minibatches)):
                 with torch.no_grad(), timing.add_time("minibatch_init"):
                     indices = minibatches[batch_num]
-                    ds_indices = ds_minibatches[batch_num] if ds_minibatches else None
 
                     # current minibatch consisting of short trajectory segments with length == recurrence
                     mb = self._get_minibatch(gpu_buffer, indices)
-                    ds_mb = self._get_minibatch(ds_gpu_buffer, ds_indices) if ds_gpu_buffer else None
 
                     # enable syntactic sugar that allows us to access dict's keys as object attributes
                     mb = AttrDict(mb)
-                    ds_mb = AttrDict(ds_mb) if ds_mb else None
 
                 with timing.add_time("calculate_losses"):
                     (
@@ -490,7 +520,7 @@ class DatasetLearner(Learner):
                         loss_summaries,
                         regularizer_loss,
                         regularizer_loss_summaries,
-                    ) = self._calculate_losses(mb, num_invalids, ds_mb, ds_num_invalids)
+                    ) = self._calculate_losses(mb, num_invalids)
 
                 with timing.add_time("losses_postprocess"):
                     # noinspection PyTypeChecker
@@ -612,15 +642,8 @@ class DatasetLearner(Learner):
             self._maybe_update_cfg()
             self._maybe_load_policy()
 
-        with self.timing.add_time("sample_dataset_batch"):
-            dataset_batch = self._sample_dataset_batch() if self.cfg.use_dataset else None
-
         with self.timing.add_time("prepare_batch"):
             buff, experience_size, num_invalids = self._prepare_batch(batch)
-            if dataset_batch:
-                ds_buff, ds_experience_size, ds_num_invalids = self._prepare_batch(dataset_batch)
-            else:
-                ds_buff, ds_experience_size, ds_num_invalids = None, None, None
 
         if num_invalids >= experience_size:
             if self.cfg.with_pbt:
@@ -635,16 +658,12 @@ class DatasetLearner(Learner):
                     self.cfg.batch_size,
                     experience_size,
                     num_invalids,
-                    ds_buff,
-                    self.cfg.dataset_batch_size,
-                    ds_experience_size,
-                    ds_num_invalids,
                 )
 
             # multiply the number of samples by frameskip so that FPS metrics reflect the number
             # of environment steps actually simulated
             if self.cfg.behavioral_clone:
-                self.env_steps += ds_experience_size
+                self.env_steps += self.dataset_batch_size * self.dataset_rollout
             else:
                 if self.cfg.summaries_use_frameskip:
                     self.env_steps += experience_size * self.env_info.frameskip

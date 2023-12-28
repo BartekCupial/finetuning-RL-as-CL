@@ -105,7 +105,7 @@ def to_numpy(t: Tensor | TensorDict) -> Tensor | TensorDict:
         return t.numpy()  # only going to work for cpu tensors
 
 
-def cat_tensordicts(lst: List[TensorDict]) -> TensorDict:
+def cat_tensordicts(lst: List[TensorDict], dim: int = 0) -> TensorDict:
     """
     Concatenates a list of tensordicts.
     """
@@ -116,11 +116,31 @@ def cat_tensordicts(lst: List[TensorDict]) -> TensorDict:
     # iterate res recursively and concatenate tensors
     for d, k, v in iterate_recursively(res):
         if isinstance(v[0], torch.Tensor):
-            d[k] = torch.cat(v)
+            d[k] = torch.cat(v, axis=dim)
         elif isinstance(v[0], np.ndarray):
-            d[k] = np.concatenate(v)
+            d[k] = np.concatenate(v, dim=dim)
         else:
             raise ValueError(f"Type {type(v[0])} not supported in cat_tensordicts")
+
+    return TensorDict(res)
+
+
+def stack_tensordicts(lst: List[TensorDict], dim: int = 0) -> TensorDict:
+    """
+    Concatenates a list of tensordicts.
+    """
+    if not lst:
+        return TensorDict()
+
+    res = list_of_dicts_to_dict_of_lists(lst)
+    # iterate res recursively and concatenate tensors
+    for d, k, v in iterate_recursively(res):
+        if isinstance(v[0], torch.Tensor):
+            d[k] = torch.stack(v, dim=dim)
+        elif isinstance(v[0], np.ndarray):
+            d[k] = np.stack(v, axis=dim)
+        else:
+            raise ValueError(f"Type {type(v[0])} not supported in stack_tensordicts")
 
     return TensorDict(res)
 
