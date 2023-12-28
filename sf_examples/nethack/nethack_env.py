@@ -5,7 +5,6 @@ from nle.env.tasks import NetHackScore
 
 from sample_factory.algo.utils.gymnasium_utils import patch_non_gymnasium_env
 from sample_factory.utils.utils import videos_dir
-from sf_examples.nethack.datasets.env import NetHackTtyrec
 from sf_examples.nethack.utils.tasks import (
     NetHackChallenge,
     NetHackEat,
@@ -33,7 +32,6 @@ NETHACK_ENVS = dict(
     eat=NetHackEat,
     scout=NetHackScout,
     challenge=NetHackChallenge,
-    dataset=NetHackTtyrec,
 )
 
 
@@ -103,10 +101,7 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
     if cfg.state_counter is not None:
         kwargs.update(state_counter=cfg.state_counter)
 
-    if env_name == "dataset":
-        env = env_class(cfg, **kwargs)
-    else:
-        env = env_class(**kwargs)
+    env = env_class(**kwargs)
 
     env = patch_non_gymnasium_env(env)
 
