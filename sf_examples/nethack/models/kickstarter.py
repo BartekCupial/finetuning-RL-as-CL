@@ -81,24 +81,36 @@ class KickStarter(nn.Module):
         return torch.cat([student_head_output, teacher_head_output], dim=1)
 
     def forward_core(self, head_output, rnn_states):
-        unpacked_head_output, lengths = pad_packed_sequence(head_output)
-        unpacked_head_output_split = unpacked_head_output.chunk(self.num_models, dim=2)
-        student_head_output = pack_padded_sequence(unpacked_head_output_split[0], lengths, enforce_sorted=False)
-        teacher_head_output = pack_padded_sequence(unpacked_head_output_split[1], lengths, enforce_sorted=False)
+        if isinstance(head_output, torch.nn.utils.rnn.PackedSequence):
+            unpacked_head_output, lengths = pad_packed_sequence(head_output)
+            unpacked_head_output_split = unpacked_head_output.chunk(self.num_models, dim=2)
+            student_head_output = pack_padded_sequence(unpacked_head_output_split[0], lengths, enforce_sorted=False)
+            teacher_head_output = pack_padded_sequence(unpacked_head_output_split[1], lengths, enforce_sorted=False)
 
-        student_rnn_states, teacher_rnn_states = rnn_states.chunk(self.num_models, dim=1)
+            student_rnn_states, teacher_rnn_states = rnn_states.chunk(self.num_models, dim=1)
 
-        student_output, student_new_rnn_state = self.student.forward_core(student_head_output, student_rnn_states)
-        teacher_output, teacher_new_rnn_state = self.teacher.forward_core(teacher_head_output, teacher_rnn_states)
+            student_output, student_new_rnn_state = self.student.forward_core(student_head_output, student_rnn_states)
+            teacher_output, teacher_new_rnn_state = self.teacher.forward_core(teacher_head_output, teacher_rnn_states)
 
-        unpacked_student_output, lengths = pad_packed_sequence(student_output)
-        unpacked_teacher_output, lengths = pad_packed_sequence(teacher_output)
-        unpacked_outputs = torch.cat([unpacked_student_output, unpacked_teacher_output], dim=2)
-        outputs = pack_padded_sequence(unpacked_outputs, lengths, enforce_sorted=False)
+            unpacked_student_output, lengths = pad_packed_sequence(student_output)
+            unpacked_teacher_output, lengths = pad_packed_sequence(teacher_output)
+            unpacked_outputs = torch.cat([unpacked_student_output, unpacked_teacher_output], dim=2)
+            outputs = pack_padded_sequence(unpacked_outputs, lengths, enforce_sorted=False)
 
-        new_rnn_states = torch.cat([student_new_rnn_state, teacher_new_rnn_state], dim=1)
+            new_rnn_states = torch.cat([student_new_rnn_state, teacher_new_rnn_state], dim=1)
 
-        return outputs, new_rnn_states
+            return outputs, new_rnn_states
+        else:
+            student_head_output, teacher_head_output = head_output.chunk(self.num_models, dim=1)
+            student_rnn_states, teacher_rnn_states = rnn_states.chunk(self.num_models, dim=1)
+
+            student_output, student_new_rnn_state = self.student.forward_core(student_head_output, student_rnn_states)
+            teacher_output, teacher_new_rnn_state = self.teacher.forward_core(teacher_head_output, teacher_rnn_states)
+
+            outputs = torch.cat([student_output, teacher_output], dim=1)
+            new_rnn_states = torch.cat([student_new_rnn_state, teacher_new_rnn_state], dim=1)
+
+            return outputs, new_rnn_states
 
     def forward_tail(self, core_output, values_only: bool, sample_actions: bool) -> TensorDict:
         core_outputs_split = core_output.chunk(self.num_models, dim=1)
