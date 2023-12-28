@@ -263,7 +263,7 @@ class ChaoticDwarvenGPT5(Encoder):
             bottomline_shape = obs_space["blstats"].shape
 
         if self.use_prev_action:
-            self.num_actions = obs_space["prev_action"].n
+            self.num_actions = obs_space["prev_actions"].n
             self.prev_actions_dim = self.num_actions
         else:
             self.num_actions = None
@@ -295,7 +295,7 @@ class ChaoticDwarvenGPT5(Encoder):
         ]
 
         if self.use_prev_action:
-            prev_actions = obs_dict["prev_action"].long().view(B)
+            prev_actions = obs_dict["prev_actions"].long().view(B)
             encodings.append(torch.nn.functional.one_hot(prev_actions, self.num_actions))
 
         return torch.cat(encodings, dim=1)

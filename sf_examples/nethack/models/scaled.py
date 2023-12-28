@@ -107,7 +107,7 @@ class ScaledNet(Encoder):
         )
 
         if self.use_prev_action:
-            self.num_actions = obs_space["prev_action"].n
+            self.num_actions = obs_space["prev_actions"].n
             self.prev_actions_dim = self.num_actions
         else:
             self.num_actions = None
@@ -170,7 +170,7 @@ class ScaledNet(Encoder):
 
         # Previous action encoding
         if self.use_prev_action:
-            encodings.append(torch.nn.functional.one_hot(obs_dict["prev_action"].long(), self.num_actions).view(B, -1))
+            encodings.append(torch.nn.functional.one_hot(obs_dict["prev_actions"].long(), self.num_actions).view(B, -1))
 
         # Crop encoding
         if self.use_crop:
