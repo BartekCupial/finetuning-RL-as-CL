@@ -6,9 +6,9 @@ name = globals()["script"][:-3]
 config = {
     "env": "challenge",
     "exp_tags": [name],
-    "exp_point": "monk-APPO-KS",
+    "exp_point": "monk-APPO-KS-T",
     "train_for_env_steps": 2_000_000_000,
-    "group": "monk-APPO-KS",
+    "group": "monk-APPO-KS-T",
     "character": "mon-hum-neu-mal",
     "num_workers": 16,
     "num_envs_per_worker": 30,
@@ -34,6 +34,10 @@ config = {
 params_grid = [
     {
         "seed": list(range(1)),
+        "use_pretrained_checkpoint": [True],
+        "model_path": [
+            "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/@-AA-BC_pretrained_use_prev_action"
+        ],
     },
 ]
 

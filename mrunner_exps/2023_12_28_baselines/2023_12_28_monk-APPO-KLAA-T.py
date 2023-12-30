@@ -6,9 +6,9 @@ name = globals()["script"][:-3]
 config = {
     "env": "challenge",
     "exp_tags": [name],
-    "exp_point": "monk-APPO-KS",
+    "exp_point": "monk-APPO-KLAA-T",
     "train_for_env_steps": 2_000_000_000,
-    "group": "monk-APPO-KS",
+    "group": "monk-APPO-KLAA-T",
     "character": "mon-hum-neu-mal",
     "num_workers": 16,
     "num_envs_per_worker": 30,
@@ -21,7 +21,13 @@ config = {
     "wandb_project": "sf2_nethack",
     "wandb_group": "gmum",
     "with_wandb": True,
-    "kickstarting_loss_coeff": 0.05,
+    "use_dataset": True,
+    "db_path": "/ttyrecs/ttyrecs.db",
+    "data_path": "/nle/nld-aa/nle_data",
+    "dataset_name": "autoascend",
+    "dataset_rollout": 32,
+    "dataset_batch_size": 8192,  # this equals bs = 256, 256 * 32 = 8192
+    "distillation_loss_coeff": 0.2,
     "teacher_path": "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/@-AA-BC_pretrained_use_prev_action",
     "run_teacher_hs": False,
     "use_prev_action": True,
@@ -34,6 +40,10 @@ config = {
 params_grid = [
     {
         "seed": list(range(1)),
+        "use_pretrained_checkpoint": [True],
+        "model_path": [
+            "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/@-AA-BC_pretrained_use_prev_action"
+        ],
     },
 ]
 

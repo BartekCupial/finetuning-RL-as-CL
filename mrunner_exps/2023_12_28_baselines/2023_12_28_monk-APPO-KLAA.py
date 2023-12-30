@@ -28,7 +28,7 @@ config = {
     "dataset_rollout": 32,
     "dataset_batch_size": 8192,  # this equals bs = 256, 256 * 32 = 8192
     "distillation_loss_coeff": 0.2,
-    "teacher_path": "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/@-AA-BC/pretrained",
+    "teacher_path": "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/@-AA-BC_pretrained_use_prev_action",
     "run_teacher_hs": False,
     "use_prev_action": True,
     "model": "ScaledNet",
