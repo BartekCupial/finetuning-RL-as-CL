@@ -32,6 +32,7 @@ config = {
     "model": "ScaledNet",
     "use_resnet": True,
     "rnn_size": 512,
+    "h_dim": 512,
 }
 
 # params different between exps
