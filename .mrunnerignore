@@ -1,8 +1,12 @@
 # Folders not needed for experiments
 .github/
+assets/
 docs/
 tests/
 mrunner_exps/
+mrunner_auto/
+nle/
+notebooks/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
