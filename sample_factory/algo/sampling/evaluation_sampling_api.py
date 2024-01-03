@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import csv
 import math
 import time
 from collections import OrderedDict
+from pathlib import Path
 from threading import Thread
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
@@ -25,11 +27,13 @@ from sample_factory.cfg.configurable import Configurable
 from sample_factory.utils.dicts import iterate_recursively
 from sample_factory.utils.gpu_utils import set_global_cuda_envvars
 from sample_factory.utils.typing import Config, InitModelData, PolicyID, StatusCode
-from sample_factory.utils.utils import log
+from sample_factory.utils.utils import experiment_dir, log
 
 
 class SamplingLoop(EventLoopObject, Configurable):
-    def __init__(self, cfg: Config, env_info: EnvInfo, print_episode_info: bool = True):
+    def __init__(
+        self, cfg: Config, env_info: EnvInfo, print_episode_info: bool = True, save_episode_stats: bool = True
+    ):
         Configurable.__init__(self, cfg_dict(cfg))
 
         unique_name = SamplingLoop.__name__
@@ -78,6 +82,7 @@ class SamplingLoop(EventLoopObject, Configurable):
         }
 
         self.print_episode_info = print_episode_info
+        self.save_episode_stats = save_episode_stats
 
     @signal
     def model_initialized(self):
@@ -165,6 +170,49 @@ class SamplingLoop(EventLoopObject, Configurable):
                     stats_observer.policy_avg_stats[key][policy_id].extend(value)
                 else:
                     stats_observer.policy_avg_stats[key][policy_id].append(value)
+
+            if stats_observer.save_episode_stats:
+                SamplingLoop._save_eval_results(stats_observer, s, policy_id)
+
+    @staticmethod
+    def _save_eval_results(stats_observer: SamplingLoop, eval_stats, policy_id: PolicyID):
+        cfg = stats_observer.cfg
+
+        csv_output_dir = Path(experiment_dir(cfg=cfg))
+        if cfg.csv_folder_name is not None:
+            csv_output_dir = csv_output_dir / cfg.csv_folder_name
+        csv_output_dir.mkdir(exist_ok=True, parents=True)
+        file_path = csv_output_dir / f"running_eval_p{policy_id}.csv"
+
+        column_names = [""]
+        new_data = []
+        for _, key, value in iterate_recursively(eval_stats):
+            column_names.append(key)
+            new_data.append(value)
+
+        # Check if the file exists, and if not, write the header
+        try:
+            with open(file_path, "x", newline="") as file:
+                writer = csv.writer(file)
+                writer.writerow(column_names)
+            fresh_file = True
+        except FileExistsError:
+            fresh_file = False
+
+        # Read the last row number from the existing file
+        if not fresh_file:
+            with open(file_path, "r", newline="") as file:
+                reader = csv.reader(file)
+                last_row = list(reader)[-1]
+                last_row_number = int(last_row[0]) + 1
+        else:
+            last_row_number = 0
+        new_data.insert(0, last_row_number)
+
+        # Append new rows to the file
+        with open(file_path, "a") as f:
+            writer = csv.writer(f)
+            writer.writerow(new_data)
 
     def wait_until_ready(self):
         while not self.ready:

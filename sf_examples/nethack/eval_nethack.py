@@ -1,7 +1,7 @@
 import sys
 
 from sample_factory.cfg.arguments import checkpoint_override_defaults, parse_full_cfg, parse_sf_args
-from sample_factory.eval import eval
+from sample_factory.eval import do_eval
 from sf_examples.nethack.nethack_params import (
     add_extra_params_general,
     add_extra_params_learner,
@@ -29,7 +29,7 @@ def main():  # pragma: no cover
 
     cfg = parse_full_cfg(parser)
 
-    status = eval(cfg)
+    status = do_eval(cfg)
     return status
 
 
