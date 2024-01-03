@@ -1,12 +1,12 @@
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, Optional, Tuple
 
-import nle.dataset as nld
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 
+import nle.dataset as nld
 from sample_factory.algo.learning.learner import Learner
 from sample_factory.algo.learning.rnn_utils import build_core_out_from_seq, build_rnn_inputs
 from sample_factory.algo.utils.action_distributions import get_action_distribution
@@ -405,6 +405,10 @@ class DatasetLearner(Learner):
             if self.cfg.use_dataset:
                 dataset_mb = self._get_dataset_minibatch()
                 dataset_mb_results = self._calculate_dataset_outputs(dataset_mb)
+                dataset_num_invalids = 0
+            else:
+                dataset_mb = None
+                dataset_mb_results = None
                 dataset_num_invalids = 0
 
             supervised_loss = self.supervised_loss_func(
