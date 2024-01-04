@@ -92,6 +92,8 @@ class DatasetLearner(Learner):
                         timestamp_diff = batch["timestamps"] - np.concatenate(
                             [prev_timestamps, batch["timestamps"][:, :-1].copy()], axis=1
                         )
+                        # override dones which may or may not be set correctly in dataset
+                        batch["done"][:] = 0
                         batch["done"][np.where(timestamp_diff != 1)] = 1
                         prev_timestamps = np.expand_dims(batch["timestamps"][:, -1].copy(), -1)
 
