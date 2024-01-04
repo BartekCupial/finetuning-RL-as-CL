@@ -36,11 +36,19 @@ params_grid = [
         "character": ["@", "mon-hum-neu-mal"],
         "learning_rate": [0.001],
         "use_prev_action": [False, True],
-        # "db_path": ["/home/bartek/Workspace/data/nethack/AA-taster/ttyrecs.db"],
-        # "num_workers": [8],
+        # "with_wandb": [False],
         # "batch_size": [1024],
-        # "dataset_batch_size": [4096],
+        # "dataset_batch_size": [1024],
+        # "num_workers": [8],
+        # "dataset_num_workers": [8],
         # "restart_behavior": ["overwrite"],
+        # "db_path": ["/home/bartek/Workspace/data/nethack/AA-taster/ttyrecs.db"],
+        # "model_path": [
+        #     "train_dir/monk-AA-BC_pretrained_use_prev_action"
+        # ],
+        # "teacher_path": [
+        #     "train_dir/monk-AA-BC_pretrained_use_prev_action"
+        # ],
     },
 ]
 
