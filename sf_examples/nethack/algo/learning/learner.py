@@ -369,12 +369,12 @@ class DatasetLearner(Learner):
         clip_ratio_low = 1.0 / clip_ratio_high
         clip_value = self.cfg.ppo_clip_value
 
-        mb_results = self._compute_model_outputs(mb, num_invalids)
-        # we want action distribution (last) of the same shape as mb
-        action_distribution = self.actor_critic.action_distribution()
+        if not self.cfg.behavioral_clone:
+            mb_results = self._compute_model_outputs(mb, num_invalids)
+            # we want action distribution (last) of the same shape as mb
+            action_distribution = self.actor_critic.action_distribution()
 
-        with self.timing.add_time("losses"):
-            if not self.cfg.behavioral_clone:
+            with self.timing.add_time("ppo_losses"):
                 ratio = mb_results["ratio"]
                 adv = mb_results["adv"]
                 adv_mean = mb_results["adv_mean"]
@@ -391,17 +391,25 @@ class DatasetLearner(Learner):
                 )
                 old_values = mb["values"]
                 value_loss = self._value_loss(values, old_values, targets, clip_value, valids, num_invalids)
-            else:
-                ratio = torch.tensor([0.0])
-                policy_loss = 0.0
-                exploration_loss = 0.0
-                kl_old, kl_loss = torch.tensor([0.0]), 0.0
-                value_loss = 0.0
-                kickstarting_loss = 0.0
-                adv, adv_mean, adv_std = 0.0, 0.0, 0.0
-                values = torch.tensor([0.0]).to(self.device)
 
-        with self.timing.add_time("regularizer_losses"):
+            with self.timing.add_time("kickstarting_loss"):
+                kickstarting_loss = self.kickstarting_loss_func(
+                    mb_results["result"],
+                    mb_results["valids"],
+                    num_invalids,
+                )
+        else:
+            action_distribution = None
+            ratio = torch.tensor([0.0])
+            policy_loss = 0.0
+            exploration_loss = 0.0
+            kl_old, kl_loss = torch.tensor([0.0]), 0.0
+            value_loss = 0.0
+            kickstarting_loss = 0.0
+            adv, adv_mean, adv_std = 0.0, 0.0, 0.0
+            values = torch.tensor([0.0]).to(self.device)
+
+        with self.timing.add_time("prepare_dataset_batch"):
             if self.cfg.use_dataset:
                 dataset_mb = self._get_dataset_minibatch()
                 dataset_mb_results = self._calculate_dataset_outputs(dataset_mb)
@@ -411,22 +419,23 @@ class DatasetLearner(Learner):
                 dataset_mb_results = None
                 dataset_num_invalids = 0
 
+        with self.timing.add_time("supervised_loss"):
             supervised_loss = self.supervised_loss_func(
                 dataset_mb_results,
                 dataset_mb,
                 dataset_num_invalids,
             )
+
+        with self.timing.add_time("distillation_loss"):
             distillation_loss = self.distillation_loss_func(
                 dataset_mb_results,
                 dataset_mb,
                 dataset_num_invalids,
             )
-            kickstarting_loss = self.kickstarting_loss_func(
-                mb_results["result"],
-                mb_results["valids"],
-                num_invalids,
-            )
 
+        action_distribution = (
+            action_distribution if action_distribution is not None else self.actor_critic.action_distribution()
+        )
         loss_summaries = dict(
             ratio=ratio,
             clip_ratio_low=clip_ratio_low,
@@ -667,7 +676,7 @@ class DatasetLearner(Learner):
             # multiply the number of samples by frameskip so that FPS metrics reflect the number
             # of environment steps actually simulated
             if self.cfg.behavioral_clone:
-                self.env_steps += self.dataset_batch_size * self.dataset_rollout
+                self.env_steps += self.cfg.dataset_batch_size
             else:
                 if self.cfg.summaries_use_frameskip:
                     self.env_steps += experience_size * self.env_info.frameskip
