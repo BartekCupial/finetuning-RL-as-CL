@@ -169,6 +169,12 @@ def add_rl_args(p: ArgumentParser):
         type=str2bool,
         help="Whether to randomize and shuffle minibatches between iterations (this is a slow operation when batches are large, disabling this increases learner throughput when training with multiple epochs/minibatches per epoch)",
     )
+    p.add_argument(
+        "--warmup",
+        default=0,
+        type=int,
+        help="Number of train env steps before we start taking updates in trainer. Setting to 0 means no warmup.",
+    )
 
     # basic RL parameters
     p.add_argument("--gamma", default=0.99, type=float, help="Discount factor")

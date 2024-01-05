@@ -543,6 +543,9 @@ class DatasetLearner(Learner):
                     critic_loss = value_loss
                     loss: Tensor = actor_loss + critic_loss + regularizer_loss
 
+                    if self.cfg.warmup >= self.env_steps:
+                        loss = loss * 0
+
                     epoch_actor_losses[batch_num] = float(actor_loss)
 
                     high_loss = 30.0
