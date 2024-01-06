@@ -7,7 +7,7 @@ config = {
     "env": "challenge",
     "exp_tags": [name],
     "exp_point": "monk-APPO-T",
-    "train_for_env_steps": 100_000_000,
+    "train_for_env_steps": 1_000_000_000,
     "group": "monk-APPO-T",
     "character": "mon-hum-neu-mal",
     "num_workers": 16,
@@ -34,6 +34,7 @@ params_grid = [
     {
         "seed": list(range(3)),
         "use_pretrained_checkpoint": [True],
+        "learning_rate": [0.0001, 0.00001],
         "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
     },
 ]
