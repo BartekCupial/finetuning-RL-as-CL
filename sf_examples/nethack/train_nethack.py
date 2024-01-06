@@ -58,6 +58,8 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
             load_pretrained_checkpoint(student, cfg.model_path, cfg.load_checkpoint_kind)
             log.debug("Loading student from pretrained checkpoint")
 
+        freeze_selected(cfg, student)
+
         # because there can be some missing parameters in the teacher config
         # we will get the default values and override the default_cfg with what teacher had in the config
         teacher_cfg = load_from_path(join(cfg.teacher_path, "config.json"))
@@ -74,7 +76,33 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
             load_pretrained_checkpoint(model, cfg.model_path, cfg.load_checkpoint_kind)
             log.debug("Loading model from pretrained checkpoint")
 
+        freeze_selected(cfg, model)
+
     return model
+
+
+def freeze(model):
+    for name, param in model.named_parameters():
+        param.requires_grad = False
+
+
+def freeze_selected(cfg, model):
+    if cfg.freeze_encoder:
+        freeze(model.encoder)
+        log.debug("Frozen encoder.")
+
+    if cfg.freeze_core:
+        freeze(model.core)
+        freeze(model.decoder)
+        log.debug("Frozen core.")
+
+    if cfg.freeze_policy_head:
+        freeze(model.critic_linear)
+        log.debug("Frozen policy head.")
+
+    if cfg.freeze_critic_head:
+        freeze(model.action_parameterization)
+        log.debug("Frozen critic head.")
 
 
 def register_nethack_learner():

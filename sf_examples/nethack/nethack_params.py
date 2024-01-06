@@ -95,6 +95,10 @@ def add_extra_params_general(parser):
     p.add_argument("--add_stats_to_info", type=str2bool, default=True)
     p.add_argument("--capture_video", type=str2bool, default=False)
     p.add_argument("--capture_video_ith", type=int, default=100)
+    p.add_argument("--freeze_encoder", type=str2bool, default=False)
+    p.add_argument("--freeze_core", type=str2bool, default=False)
+    p.add_argument("--freeze_policy_head", type=str2bool, default=False)
+    p.add_argument("--freeze_critic_head", type=str2bool, default=False)
 
 
 def nethack_override_defaults(_env, parser):
