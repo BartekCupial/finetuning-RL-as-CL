@@ -283,7 +283,9 @@ def add_rl_args(p: ArgumentParser):
     )
 
     # optimization
-    p.add_argument("--optimizer", default="adam", type=str, choices=["adam", "lamb"], help="Type of optimizer to use")
+    p.add_argument(
+        "--optimizer", default="adam", type=str, choices=["sgd", "adam", "lamb"], help="Type of optimizer to use"
+    )
     p.add_argument(
         "--adam_eps",
         default=1e-6,
@@ -292,6 +294,7 @@ def add_rl_args(p: ArgumentParser):
     )
     p.add_argument("--adam_beta1", default=0.9, type=float, help="Adam momentum decay coefficient")
     p.add_argument("--adam_beta2", default=0.999, type=float, help="Adam second momentum decay coefficient")
+    p.add_argument("--sgd_momentum", default=0.9, type=float, help="SGD momentum decay coefficient")
     p.add_argument(
         "--max_grad_norm",
         default=4.0,
