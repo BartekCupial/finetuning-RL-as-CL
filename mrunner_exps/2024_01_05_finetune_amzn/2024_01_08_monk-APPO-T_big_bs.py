@@ -37,7 +37,7 @@ params_grid = [
         "optimizer": ["sgd"],
         "momentum": [0.9],
         "batch_size": [4096 * 2, 4096 * 3],
-        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints//amzn-AA-BC_pretrained"],
+        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
     },
 ]
 

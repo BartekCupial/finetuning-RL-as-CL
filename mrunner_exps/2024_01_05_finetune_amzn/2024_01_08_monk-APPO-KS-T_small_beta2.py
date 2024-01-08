@@ -40,7 +40,7 @@ params_grid = [
         "use_pretrained_checkpoint": [True],
         "optimizer": ["adam"],
         "adam_beta2": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
-        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints//amzn-AA-BC_pretrained"],
+        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
     },
 ]
 

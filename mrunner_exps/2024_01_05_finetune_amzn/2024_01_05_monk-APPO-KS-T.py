@@ -38,7 +38,7 @@ params_grid = [
         "seed": list(range(3)),
         "kickstarting_loss_coeff": [0.05, 0.1, 0.2, 0.5],
         "use_pretrained_checkpoint": [True],
-        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints//amzn-AA-BC_pretrained"],
+        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
     },
 ]
 

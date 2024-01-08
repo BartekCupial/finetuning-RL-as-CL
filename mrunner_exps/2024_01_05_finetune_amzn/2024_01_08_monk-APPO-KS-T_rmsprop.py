@@ -40,7 +40,7 @@ params_grid = [
         "use_pretrained_checkpoint": [True],
         "optimizer": ["rmsprop"],
         "momentum": [0.0, 0.8, 0.85, 0.9, 0.95, 0.99],
-        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints//amzn-AA-BC_pretrained"],
+        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
     },
 ]
 

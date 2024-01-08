@@ -40,7 +40,7 @@ params_grid = [
         "use_pretrained_checkpoint": [True],
         "freeze_encoder": [True],
         "freeze_core": [True],
-        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints//amzn-AA-BC_pretrained"],
+        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
     },
     {
         "seed": list(range(3)),
@@ -48,7 +48,7 @@ params_grid = [
         "use_pretrained_checkpoint": [True],
         "freeze_encoder": [True],
         "freeze_core": [False],
-        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints//amzn-AA-BC_pretrained"],
+        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
     },
 ]
 
