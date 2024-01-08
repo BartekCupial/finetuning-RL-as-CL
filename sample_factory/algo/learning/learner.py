@@ -226,7 +226,7 @@ class Learner(Configurable):
 
         params = list(self.actor_critic.parameters())
 
-        optimizer_cls = dict(sgd=torch.optim.SGD, adam=torch.optim.Adam, lamb=Lamb)
+        optimizer_cls = dict(sgd=torch.optim.SGD, adam=torch.optim.Adam, lamb=Lamb, rmsprop=torch.optim.RMSprop)
         if self.cfg.optimizer not in optimizer_cls:
             raise RuntimeError(f"Unknown optimizer {self.cfg.optimizer}")
 
@@ -241,8 +241,8 @@ class Learner(Configurable):
             optimizer_kwargs["eps"] = self.cfg.adam_eps
             optimizer_kwargs["betas"] = (self.cfg.adam_beta1, self.cfg.adam_beta2)
 
-        if self.cfg.optimizer in ["sgd"]:
-            optimizer_kwargs["momentum"] = self.cfg.sgd_momentum
+        if self.cfg.optimizer in ["sgd", "rmsprop"]:
+            optimizer_kwargs["momentum"] = self.cfg.momentum
 
         self.optimizer = optimizer_cls(params, **optimizer_kwargs)
 

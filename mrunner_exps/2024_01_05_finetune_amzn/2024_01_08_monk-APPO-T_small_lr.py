@@ -35,7 +35,7 @@ params_grid = [
         "seed": list(range(1)),
         "use_pretrained_checkpoint": [True],
         "optimizer": ["sgd"],
-        "sgd_momentum": [0.9],
+        "momentum": [0.9],
         "learning_rate": [0.00001, 0.000006],
         "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints//amzn-AA-BC_pretrained"],
     },
