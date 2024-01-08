@@ -584,9 +584,15 @@ class DatasetLearner(Learner):
                     if kl_old.numel() > 0 and kl_old.max().item() > 100:
                         log.warning(f"KL-divergence is very high: {kl_old.max().item():.4f}")
 
+                with timing.add_time("unfreeze_model"):
+                    if isinstance(self.actor_critic, KickStarter):
+                        unfreeze_selected(self.env_steps, self.cfg, self.actor_critic.student, self.models_frozen)
+                    else:
+                        unfreeze_selected(self.env_steps, self.cfg, self.actor_critic, self.models_frozen)
+
                 actual_lr = self.curr_lr
                 curr_policy_version = self.train_step  # policy version before the weight update
-                if self.env_steps >= self.cfg.warmup:
+                if self.env_steps - experience_size >= self.cfg.warmup:
                     # update the weights
                     with timing.add_time("update"):
                         # following advice from https://youtu.be/9mS1fIYj1So set grad to None instead of optimizer.zero_grad()
@@ -610,12 +616,6 @@ class DatasetLearner(Learner):
                             self.optimizer.step()
 
                         num_sgd_steps += 1
-
-                with timing.add_time("unfreeze_model"):
-                    if isinstance(self.actor_critic, KickStarter):
-                        unfreeze_selected(self.env_steps, self.cfg, self.actor_critic.student, self.models_frozen)
-                    else:
-                        unfreeze_selected(self.env_steps, self.cfg, self.actor_critic, self.models_frozen)
 
                 with torch.no_grad(), timing.add_time("after_optimizer"):
                     self._after_optimizer_step()
