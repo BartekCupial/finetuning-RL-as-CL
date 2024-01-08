@@ -287,7 +287,7 @@ def add_rl_args(p: ArgumentParser):
         "--optimizer",
         default="adam",
         type=str,
-        choices=["sgd", "adam", "lamb", "rmsprop"],
+        choices=["sgd", "adam", "adam_tensorflow_style", "lamb", "rmsprop"],
         help="Type of optimizer to use",
     )
     p.add_argument(
