@@ -1,12 +1,12 @@
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, Optional, Tuple
 
+import nle.dataset as nld
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-import nle.dataset as nld
 from sample_factory.algo.learning.learner import Learner
 from sample_factory.algo.learning.rnn_utils import build_core_out_from_seq, build_rnn_inputs
 from sample_factory.algo.utils.action_distributions import get_action_distribution
@@ -26,6 +26,8 @@ from sf_examples.nethack.datasets.actions import ACTION_MAPPING
 from sf_examples.nethack.datasets.dataset import load_nld_aa_large_dataset
 from sf_examples.nethack.datasets.render import render_screen_image
 from sf_examples.nethack.datasets.roles import Alignment, Race, Role
+from sf_examples.nethack.models.kickstarter import KickStarter
+from sf_examples.nethack.models.utils import unfreeze_selected
 
 
 class DatasetLearner(Learner):
@@ -55,6 +57,13 @@ class DatasetLearner(Learner):
         self.supervised_loss_func: Optional[Callable] = None
         self.distillation_loss_func: Optional[Callable] = None
         self.kickstarting_loss_func: Optional[Callable] = None
+
+        self.models_frozen = dict(
+            encoder=True,
+            core=True,
+            policy_head=True,
+            critic_head=True,
+        )
 
     def init(self) -> InitModelData:
         init_model_data = super().init()
@@ -543,9 +552,6 @@ class DatasetLearner(Learner):
                     critic_loss = value_loss
                     loss: Tensor = actor_loss + critic_loss + regularizer_loss
 
-                    if self.cfg.warmup >= self.env_steps:
-                        loss = loss * 0
-
                     epoch_actor_losses[batch_num] = float(actor_loss)
 
                     high_loss = 30.0
@@ -578,32 +584,38 @@ class DatasetLearner(Learner):
                     if kl_old.numel() > 0 and kl_old.max().item() > 100:
                         log.warning(f"KL-divergence is very high: {kl_old.max().item():.4f}")
 
-                # update the weights
-                with timing.add_time("update"):
-                    # following advice from https://youtu.be/9mS1fIYj1So set grad to None instead of optimizer.zero_grad()
-                    for p in self.actor_critic.parameters():
-                        p.grad = None
+                actual_lr = self.curr_lr
+                curr_policy_version = self.train_step  # policy version before the weight update
+                if self.env_steps >= self.cfg.warmup:
+                    # update the weights
+                    with timing.add_time("update"):
+                        # following advice from https://youtu.be/9mS1fIYj1So set grad to None instead of optimizer.zero_grad()
+                        for p in self.actor_critic.parameters():
+                            p.grad = None
 
-                    loss.backward()
+                        loss.backward()
 
-                    if self.cfg.max_grad_norm > 0.0:
-                        with timing.add_time("clip"):
-                            torch.nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.cfg.max_grad_norm)
+                        if self.cfg.max_grad_norm > 0.0:
+                            with timing.add_time("clip"):
+                                torch.nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.cfg.max_grad_norm)
 
-                    curr_policy_version = self.train_step  # policy version before the weight update
+                        if num_invalids > 0:
+                            # if we have masked (invalid) data we should reduce the learning rate accordingly
+                            # this prevents a situation where most of the data in the minibatch is invalid
+                            # and we end up doing SGD with super noisy gradients
+                            actual_lr = self.curr_lr * (experience_size - num_invalids) / experience_size
+                        self._apply_lr(actual_lr)
 
-                    actual_lr = self.curr_lr
-                    if num_invalids > 0:
-                        # if we have masked (invalid) data we should reduce the learning rate accordingly
-                        # this prevents a situation where most of the data in the minibatch is invalid
-                        # and we end up doing SGD with super noisy gradients
-                        actual_lr = self.curr_lr * (experience_size - num_invalids) / experience_size
-                    self._apply_lr(actual_lr)
+                        with self.param_server.policy_lock:
+                            self.optimizer.step()
 
-                    with self.param_server.policy_lock:
-                        self.optimizer.step()
+                        num_sgd_steps += 1
 
-                    num_sgd_steps += 1
+                with timing.add_time("unfreeze_model"):
+                    if isinstance(self.actor_critic, KickStarter):
+                        unfreeze_selected(self.env_steps, self.cfg, self.actor_critic.student, self.models_frozen)
+                    else:
+                        unfreeze_selected(self.env_steps, self.cfg, self.actor_critic, self.models_frozen)
 
                 with torch.no_grad(), timing.add_time("after_optimizer"):
                     self._after_optimizer_step()

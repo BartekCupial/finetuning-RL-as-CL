@@ -1,3 +1,5 @@
+import sys
+
 from sample_factory.utils.utils import str2bool
 
 
@@ -99,6 +101,10 @@ def add_extra_params_general(parser):
     p.add_argument("--freeze_core", type=str2bool, default=False)
     p.add_argument("--freeze_policy_head", type=str2bool, default=False)
     p.add_argument("--freeze_critic_head", type=str2bool, default=False)
+    p.add_argument("--unfreeze_encoder", type=int, default=sys.maxsize)
+    p.add_argument("--unfreeze_core", type=int, default=sys.maxsize)
+    p.add_argument("--unfreeze_policy_head", type=int, default=sys.maxsize)
+    p.add_argument("--unfreeze_critic_head", type=int, default=sys.maxsize)
 
 
 def nethack_override_defaults(_env, parser):

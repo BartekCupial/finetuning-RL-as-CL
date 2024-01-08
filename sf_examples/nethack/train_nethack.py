@@ -13,6 +13,7 @@ from sample_factory.utils.utils import log
 from sf_examples.nethack.algo.learning.learner import DatasetLearner
 from sf_examples.nethack.models import MODELS_LOOKUP
 from sf_examples.nethack.models.kickstarter import KickStarter
+from sf_examples.nethack.models.utils import freeze_selected
 from sf_examples.nethack.nethack_env import NETHACK_ENVS, make_nethack_env
 from sf_examples.nethack.nethack_params import (
     add_extra_params_general,
@@ -79,30 +80,6 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
         freeze_selected(cfg, model)
 
     return model
-
-
-def freeze(model):
-    for name, param in model.named_parameters():
-        param.requires_grad = False
-
-
-def freeze_selected(cfg, model):
-    if cfg.freeze_encoder:
-        freeze(model.encoder)
-        log.debug("Frozen encoder.")
-
-    if cfg.freeze_core:
-        freeze(model.core)
-        freeze(model.decoder)
-        log.debug("Frozen core.")
-
-    if cfg.freeze_policy_head:
-        freeze(model.critic_linear)
-        log.debug("Frozen policy head.")
-
-    if cfg.freeze_critic_head:
-        freeze(model.action_parameterization)
-        log.debug("Frozen critic head.")
 
 
 def register_nethack_learner():
