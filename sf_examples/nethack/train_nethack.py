@@ -1,5 +1,7 @@
+import copy
 import sys
 from os.path import join
+from typing import Callable
 
 from sample_factory.algo.learning.learner import Learner
 from sample_factory.algo.utils.context import global_model_factory, sf_global_context
@@ -47,6 +49,31 @@ def load_pretrained_checkpoint(model, checkpoint_dir, checkpoint_kind):
     model.load_state_dict(checkpoint_dict["model"])
 
 
+def load_pretrained_checkpoint_from_shared_weights(
+    model: ActorCritic, cfg: Config, create_model: Callable, obs_space: ObsSpace, action_space: ActionSpace
+):
+    # since our pretrained checkpoints have shared weights we load them in that format
+    # then create temporary model with separate actor and critic with modules from pretrained model
+    # we finally use load_state_dict to ensure that the shapes match
+    cfg.actor_critic_share_weights = True
+    model_shared = create_model(cfg, obs_space, action_space)
+    load_pretrained_checkpoint(model_shared, cfg.model_path, cfg.load_checkpoint_kind)
+    cfg.actor_critic_share_weights = False
+    tmp_model: ActorCritic = create_model(cfg, obs_space, action_space)
+
+    tmp_model.returns_normalizer = copy.deepcopy(model_shared.returns_normalizer)
+    tmp_model.actor_encoder = copy.deepcopy(model_shared.encoder)
+    tmp_model.actor_core = copy.deepcopy(model_shared.core)
+    tmp_model.critic_encoder = copy.deepcopy(model_shared.encoder)
+    tmp_model.critic_core = copy.deepcopy(model_shared.core)
+    tmp_model.actor_decoder = copy.deepcopy(model_shared.decoder)
+    tmp_model.critic_decoder = copy.deepcopy(model_shared.decoder)
+    tmp_model.critic_linear = copy.deepcopy(model_shared.critic_linear)
+    tmp_model.action_parameterization = copy.deepcopy(model_shared.action_parameterization)
+
+    model.load_state_dict(tmp_model.state_dict())
+
+
 def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: ActionSpace) -> ActorCritic:
     create_model = default_make_actor_critic_func
 
@@ -56,8 +83,11 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
     if use_distillation_loss or use_kickstarting_loss:
         student = create_model(cfg, obs_space, action_space)
         if cfg.use_pretrained_checkpoint:
-            load_pretrained_checkpoint(student, cfg.model_path, cfg.load_checkpoint_kind)
-            log.debug("Loading student from pretrained checkpoint")
+            if not cfg.actor_critic_share_weights:
+                load_pretrained_checkpoint_from_shared_weights(student, cfg, create_model, obs_space, action_space)
+            else:
+                load_pretrained_checkpoint(student, cfg.model_path, cfg.load_checkpoint_kind)
+            log.debug("Loading model from pretrained checkpoint")
 
         freeze_selected(cfg, student)
 
@@ -74,7 +104,10 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
     else:
         model = create_model(cfg, obs_space, action_space)
         if cfg.use_pretrained_checkpoint:
-            load_pretrained_checkpoint(model, cfg.model_path, cfg.load_checkpoint_kind)
+            if not cfg.actor_critic_share_weights:
+                load_pretrained_checkpoint_from_shared_weights(model, cfg, create_model, obs_space, action_space)
+            else:
+                load_pretrained_checkpoint(model, cfg.model_path, cfg.load_checkpoint_kind)
             log.debug("Loading model from pretrained checkpoint")
 
         freeze_selected(cfg, model)
