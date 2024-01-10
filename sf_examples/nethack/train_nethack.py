@@ -41,7 +41,7 @@ def make_nethack_encoder(cfg: Config, obs_space: ObsSpace) -> Encoder:
     return model_cls(cfg, obs_space)
 
 
-def load_pretrained_checkpoint(model, checkpoint_dir, checkpoint_kind):
+def load_pretrained_checkpoint(model, checkpoint_dir: str, checkpoint_kind: str):
     name_prefix = dict(latest="checkpoint", best="best")[checkpoint_kind]
     checkpoints = Learner.get_checkpoints(join(checkpoint_dir, "checkpoint_p0"), f"{name_prefix}_*")
     checkpoint_dict = Learner.load_checkpoint(checkpoints, "cpu")
@@ -49,14 +49,20 @@ def load_pretrained_checkpoint(model, checkpoint_dir, checkpoint_kind):
 
 
 def load_pretrained_checkpoint_from_shared_weights(
-    model: ActorCritic, cfg: Config, create_model: Callable, obs_space: ObsSpace, action_space: ActionSpace
+    model: ActorCritic,
+    cfg: Config,
+    checkpoint_dir: str,
+    checkpoint_kind: str,
+    create_model: Callable,
+    obs_space: ObsSpace,
+    action_space: ActionSpace,
 ):
     # since our pretrained checkpoints have shared weights we load them in that format
     # then create temporary model with separate actor and critic with modules from pretrained model
     # we finally use load_state_dict to ensure that the shapes match
     cfg.actor_critic_share_weights = True
     model_shared = create_model(cfg, obs_space, action_space)
-    load_pretrained_checkpoint(model_shared, cfg.model_path, cfg.load_checkpoint_kind)
+    load_pretrained_checkpoint(model_shared, checkpoint_dir, checkpoint_kind)
     cfg.actor_critic_share_weights = False
     tmp_model: ActorCritic = create_model(cfg, obs_space, action_space)
 
@@ -83,7 +89,9 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
         student = create_model(cfg, obs_space, action_space)
         if cfg.use_pretrained_checkpoint:
             if not cfg.actor_critic_share_weights:
-                load_pretrained_checkpoint_from_shared_weights(student, cfg, create_model, obs_space, action_space)
+                load_pretrained_checkpoint_from_shared_weights(
+                    student, cfg, cfg.model_path, cfg.load_checkpoint_kind, create_model, obs_space, action_space
+                )
             else:
                 load_pretrained_checkpoint(student, cfg.model_path, cfg.load_checkpoint_kind)
             log.debug("Loading model from pretrained checkpoint")
@@ -93,8 +101,20 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
         teacher_cfg = load_from_path(join(cfg.teacher_path, "config.json"))
         default_cfg = parse_nethack_args(argv=[f"--env={cfg.env}"], evaluation=False)
         default_cfg.__dict__.update(dict(teacher_cfg))
-        teacher = create_model(default_cfg, obs_space, action_space)
-        load_pretrained_checkpoint(teacher, cfg.teacher_path, cfg.load_checkpoint_kind)
+
+        if not cfg.actor_critic_share_weights:
+            # because of the way how we handle rnn_states we need the teacher
+            # and student to use the same rnn_size.
+            # ActorCriticSeparateWeights has 2x rnn_size the SharedWeights version.
+            # This is the reason behind making the teacher SeparateWeights.
+            default_cfg.actor_critic_share_weights = False
+            teacher = create_model(default_cfg, obs_space, action_space)
+            load_pretrained_checkpoint_from_shared_weights(
+                teacher, default_cfg, cfg.teacher_path, cfg.load_checkpoint_kind, create_model, obs_space, action_space
+            )
+        else:
+            teacher = create_model(default_cfg, obs_space, action_space)
+            load_pretrained_checkpoint(teacher, cfg.teacher_path, cfg.load_checkpoint_kind)
 
         model = KickStarter(student, teacher, run_teacher_hs=cfg.run_teacher_hs)
         log.debug("Created kickstarter")
@@ -102,7 +122,9 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
         model = create_model(cfg, obs_space, action_space)
         if cfg.use_pretrained_checkpoint:
             if not cfg.actor_critic_share_weights:
-                load_pretrained_checkpoint_from_shared_weights(model, cfg, create_model, obs_space, action_space)
+                load_pretrained_checkpoint_from_shared_weights(
+                    model, cfg, cfg.model_path, cfg.load_checkpoint_kind, create_model, obs_space, action_space
+                )
             else:
                 load_pretrained_checkpoint(model, cfg.model_path, cfg.load_checkpoint_kind)
             log.debug("Loading model from pretrained checkpoint")
