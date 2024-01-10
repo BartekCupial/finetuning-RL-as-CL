@@ -99,6 +99,7 @@ def add_extra_params_general(parser):
     p.add_argument("--capture_video_ith", type=int, default=100)
     p.add_argument("--freeze", type=ast.literal_eval, default={})
     p.add_argument("--unfreeze", type=ast.literal_eval, default={})
+    p.add_argument("--freeze_batch_norm", type=str2bool, default=False)
 
 
 def nethack_override_defaults(_env, parser):

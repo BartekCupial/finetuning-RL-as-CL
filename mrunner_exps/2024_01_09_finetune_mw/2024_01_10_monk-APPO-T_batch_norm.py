@@ -36,7 +36,10 @@ params_grid = [
         "use_pretrained_checkpoint": [True],
         "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
         "freeze": [{"encoder": 0, "core": 0, "decoder": 0, "action_parameterization": 0}],
-        "unfreeze": [{"action_parameterization": 50_000_000}],
+        "unfreeze": [
+            {"encoder": 50_000_000, "core": 50_000_000, "decoder": 50_000_000, "action_parameterization": 50_000_000}
+        ],
+        "freeze_batch_norm": [True],
     },
 ]
 
