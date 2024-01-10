@@ -39,12 +39,44 @@ params_grid = [
         "learning_rate": [0.0001, 0.00001],
         "use_pretrained_checkpoint": [True],
         "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
-        "freeze_encoder": [True],
-        "freeze_core": [True],
-        "freeze_policy_head": [True],
-        "unfreeze_encoder": [50_000_000],
-        "unfreeze_core": [50_000_000],
-        "unfreeze_policy_head": [50_000_000],
+        "freeze": [{"actor_encoder": 0, "actor_core": 0, "actor_decoder": 0, "action_parameterization": 0}],
+        "unfreeze": [
+            {
+                "actor_encoder": 50_000_000,
+                "actor_core": 50_000_000,
+                "actor_decoder": 50_000_000,
+                "action_parameterization": 50_000_000,
+            }
+        ],
+        "actor_critic_share_weights": [False],
+    },
+    {
+        "seed": list(range(1)),
+        "learning_rate": [0.0001, 0.00001],
+        "use_pretrained_checkpoint": [True],
+        "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
+        "freeze": [
+            {
+                "actor_encoder": 0,
+                "actor_core": 0,
+                "actor_decoder": 0,
+                "action_parameterization": 0,
+                "critic_encoder": 0,
+                "critic_core": 0,
+                "critic_decoder": 0,
+            }
+        ],
+        "unfreeze": [
+            {
+                "actor_encoder": 50_000_000,
+                "actor_core": 50_000_000,
+                "actor_decoder": 50_000_000,
+                "action_parameterization": 50_000_000,
+                "critic_encoder": 50_000_000,
+                "critic_core": 50_000_000,
+                "critic_decoder": 50_000_000,
+            }
+        ],
         "actor_critic_share_weights": [False],
     },
 ]

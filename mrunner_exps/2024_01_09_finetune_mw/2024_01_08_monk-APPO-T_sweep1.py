@@ -35,12 +35,10 @@ params_grid = [
         "learning_rate": [0.0001, 0.00001],
         "use_pretrained_checkpoint": [True],
         "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
-        "freeze_encoder": [True],
-        "freeze_core": [True],
-        "freeze_policy_head": [True],
-        "unfreeze_encoder": [50_000_000],
-        "unfreeze_core": [50_000_000],
-        "unfreeze_policy_head": [50_000_000],
+        "freeze": [{"encoder": 0, "core": 0, "decoder": 0, "action_parameterization": 0}],
+        "unfreeze": [
+            {"encoder": 50_000_000, "core": 50_000_000, "decoder": 50_000_000, "action_parameterization": 50_000_000}
+        ],
         "value_loss_coeff": [0.25, 0.5, 1.0, 2.0],
         "ppo_clip_value": [0.2, 1.0, 10.0],
         "reward_clip": [10.0, 1000.0],
