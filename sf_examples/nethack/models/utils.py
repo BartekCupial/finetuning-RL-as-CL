@@ -50,7 +50,7 @@ def unfreeze_batch_norm(model):
 def unfreeze_selected(step, cfg, model, models_frozen):
     for module_name, module_unfreeze in cfg.unfreeze.items():
         if step >= module_unfreeze and models_frozen[module_name]:
-            freeze(getattr(model, module_name))
+            unfreeze(getattr(model, module_name))
             log.debug(f"Unfrozen {module_name}.")
             models_frozen[module_name] = False
 
