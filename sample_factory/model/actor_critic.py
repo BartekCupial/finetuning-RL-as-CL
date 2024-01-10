@@ -143,8 +143,11 @@ class ActorCriticSharedWeights(ActorCritic):
         self.encoders = [self.encoder]  # a single shared encoder
 
         self.core = model_factory.make_model_core_func(cfg, self.encoder.get_out_size())
+        self.cores = [self.core]
 
         self.decoder = model_factory.make_model_decoder_func(cfg, self.core.get_out_size())
+        self.decoders = [self.decoder]
+
         decoder_out_size: int = self.decoder.get_out_size()
 
         self.critic_linear = nn.Linear(decoder_out_size, 1)

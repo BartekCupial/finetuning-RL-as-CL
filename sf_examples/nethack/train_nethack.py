@@ -15,7 +15,6 @@ from sample_factory.utils.utils import log
 from sf_examples.nethack.algo.learning.learner import DatasetLearner
 from sf_examples.nethack.models import MODELS_LOOKUP
 from sf_examples.nethack.models.kickstarter import KickStarter
-from sf_examples.nethack.models.utils import freeze_selected
 from sf_examples.nethack.nethack_env import NETHACK_ENVS, make_nethack_env
 from sf_examples.nethack.nethack_params import (
     add_extra_params_general,
@@ -89,8 +88,6 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
                 load_pretrained_checkpoint(student, cfg.model_path, cfg.load_checkpoint_kind)
             log.debug("Loading model from pretrained checkpoint")
 
-        freeze_selected(cfg, student)
-
         # because there can be some missing parameters in the teacher config
         # we will get the default values and override the default_cfg with what teacher had in the config
         teacher_cfg = load_from_path(join(cfg.teacher_path, "config.json"))
@@ -109,8 +106,6 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
             else:
                 load_pretrained_checkpoint(model, cfg.model_path, cfg.load_checkpoint_kind)
             log.debug("Loading model from pretrained checkpoint")
-
-        freeze_selected(cfg, model)
 
     return model
 

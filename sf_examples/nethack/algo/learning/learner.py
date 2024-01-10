@@ -27,7 +27,7 @@ from sf_examples.nethack.datasets.dataset import load_nld_aa_large_dataset
 from sf_examples.nethack.datasets.render import render_screen_image
 from sf_examples.nethack.datasets.roles import Alignment, Race, Role
 from sf_examples.nethack.models.kickstarter import KickStarter
-from sf_examples.nethack.models.utils import unfreeze_selected
+from sf_examples.nethack.models.utils import freeze_selected, unfreeze_selected
 
 
 class DatasetLearner(Learner):
@@ -58,12 +58,7 @@ class DatasetLearner(Learner):
         self.distillation_loss_func: Optional[Callable] = None
         self.kickstarting_loss_func: Optional[Callable] = None
 
-        self.models_frozen = dict(
-            encoder=True,
-            core=True,
-            policy_head=True,
-            critic_head=True,
-        )
+        self.models_frozen = dict(zip(self.cfg.freeze.keys(), [False] * len(self.cfg.freeze)))
 
     def init(self) -> InitModelData:
         init_model_data = super().init()
@@ -515,6 +510,18 @@ class DatasetLearner(Learner):
 
             assert self.actor_critic.training
 
+            with timing.add_time("freeze_model"):
+                if isinstance(self.actor_critic, KickStarter):
+                    freeze_selected(self.env_steps, self.cfg, self.actor_critic.student, self.models_frozen)
+                else:
+                    freeze_selected(self.env_steps, self.cfg, self.actor_critic, self.models_frozen)
+
+            with timing.add_time("unfreeze_model"):
+                if isinstance(self.actor_critic, KickStarter):
+                    unfreeze_selected(self.env_steps, self.cfg, self.actor_critic.student, self.models_frozen)
+                else:
+                    unfreeze_selected(self.env_steps, self.cfg, self.actor_critic, self.models_frozen)
+
         for epoch in range(self.cfg.num_epochs):
             with timing.add_time("epoch_init"):
                 if early_stop:
@@ -584,15 +591,9 @@ class DatasetLearner(Learner):
                     if kl_old.numel() > 0 and kl_old.max().item() > 100:
                         log.warning(f"KL-divergence is very high: {kl_old.max().item():.4f}")
 
-                with timing.add_time("unfreeze_model"):
-                    if isinstance(self.actor_critic, KickStarter):
-                        unfreeze_selected(self.env_steps, self.cfg, self.actor_critic.student, self.models_frozen)
-                    else:
-                        unfreeze_selected(self.env_steps, self.cfg, self.actor_critic, self.models_frozen)
-
                 actual_lr = self.curr_lr
                 curr_policy_version = self.train_step  # policy version before the weight update
-                if self.env_steps - experience_size >= self.cfg.warmup:
+                if self.env_steps >= self.cfg.warmup:
                     # update the weights
                     with timing.add_time("update"):
                         # following advice from https://youtu.be/9mS1fIYj1So set grad to None instead of optimizer.zero_grad()

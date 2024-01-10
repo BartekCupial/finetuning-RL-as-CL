@@ -1,4 +1,4 @@
-import sys
+import ast
 
 from sample_factory.utils.utils import str2bool
 
@@ -97,14 +97,8 @@ def add_extra_params_general(parser):
     p.add_argument("--add_stats_to_info", type=str2bool, default=True)
     p.add_argument("--capture_video", type=str2bool, default=False)
     p.add_argument("--capture_video_ith", type=int, default=100)
-    p.add_argument("--freeze_encoder", type=str2bool, default=False)
-    p.add_argument("--freeze_core", type=str2bool, default=False)
-    p.add_argument("--freeze_policy_head", type=str2bool, default=False)
-    p.add_argument("--freeze_critic_head", type=str2bool, default=False)
-    p.add_argument("--unfreeze_encoder", type=int, default=sys.maxsize)
-    p.add_argument("--unfreeze_core", type=int, default=sys.maxsize)
-    p.add_argument("--unfreeze_policy_head", type=int, default=sys.maxsize)
-    p.add_argument("--unfreeze_critic_head", type=int, default=sys.maxsize)
+    p.add_argument("--freeze", type=ast.literal_eval, default={})
+    p.add_argument("--unfreeze", type=ast.literal_eval, default={})
 
 
 def nethack_override_defaults(_env, parser):
