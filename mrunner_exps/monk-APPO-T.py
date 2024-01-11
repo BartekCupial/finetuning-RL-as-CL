@@ -35,9 +35,10 @@ params_grid = [
         "restart_behavior": ["overwrite"],
         "use_pretrained_checkpoint": [True],
         "model_path": ["train_dir/amzn-AA-BC_pretrained"],
-        "freeze": [{"encoder": 0, "core": 0, "decoder": 0, "action_parameterization": 0}],
-        "unfreeze": [{"action_parameterization": 50_000_000}],
+        # "freeze": [{"encoder": 0, "core": 0, "decoder": 0, "action_parameterization": 0}],
+        # "unfreeze": [{"action_parameterization": 50_000_000}],
         "normalize_returns": [False],
+        "num_batches_per_epoch": [8],
     },
 ]
 
