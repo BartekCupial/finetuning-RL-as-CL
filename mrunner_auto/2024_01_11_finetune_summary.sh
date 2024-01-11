@@ -15,3 +15,6 @@ ssh-add
 
 # mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/2024_01_11_finetune_summary/2024_01_11_monk-APPO-T_ppo_epochs_reward_scale.py
 # mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/2024_01_11_finetune_summary/2024_01_11_monk-APPO-KS-T_ppo_epochs_reward_scale.py
+
+# mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/2024_01_11_finetune_summary/2024_01_11_monk-APPO-T_warmup_running_mean.py
+# mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/2024_01_11_finetune_summary/2024_01_11_monk-APPO-KS-T_warmup_running_mean.py
