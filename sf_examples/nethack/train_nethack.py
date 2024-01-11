@@ -41,10 +41,16 @@ def make_nethack_encoder(cfg: Config, obs_space: ObsSpace) -> Encoder:
     return model_cls(cfg, obs_space)
 
 
-def load_pretrained_checkpoint(model, checkpoint_dir: str, checkpoint_kind: str):
+def load_pretrained_checkpoint(model, checkpoint_dir: str, checkpoint_kind: str, normalize_returns: bool = True):
     name_prefix = dict(latest="checkpoint", best="best")[checkpoint_kind]
     checkpoints = Learner.get_checkpoints(join(checkpoint_dir, "checkpoint_p0"), f"{name_prefix}_*")
     checkpoint_dict = Learner.load_checkpoint(checkpoints, "cpu")
+
+    if not normalize_returns:
+        del checkpoint_dict["model"]["returns_normalizer.running_mean"]
+        del checkpoint_dict["model"]["returns_normalizer.running_var"]
+        del checkpoint_dict["model"]["returns_normalizer.count"]
+
     model.load_state_dict(checkpoint_dict["model"])
 
 
@@ -62,7 +68,7 @@ def load_pretrained_checkpoint_from_shared_weights(
     # we finally use load_state_dict to ensure that the shapes match
     cfg.actor_critic_share_weights = True
     model_shared = create_model(cfg, obs_space, action_space)
-    load_pretrained_checkpoint(model_shared, checkpoint_dir, checkpoint_kind)
+    load_pretrained_checkpoint(model_shared, checkpoint_dir, checkpoint_kind, normalize_returns=cfg.normalize_returns)
     cfg.actor_critic_share_weights = False
     tmp_model: ActorCritic = create_model(cfg, obs_space, action_space)
 
@@ -93,7 +99,9 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
                     student, cfg, cfg.model_path, cfg.load_checkpoint_kind, create_model, obs_space, action_space
                 )
             else:
-                load_pretrained_checkpoint(student, cfg.model_path, cfg.load_checkpoint_kind)
+                load_pretrained_checkpoint(
+                    student, cfg.model_path, cfg.load_checkpoint_kind, normalize_returns=cfg.normalize_returns
+                )
             log.debug("Loading model from pretrained checkpoint")
 
         # because there can be some missing parameters in the teacher config
@@ -114,7 +122,9 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
             )
         else:
             teacher = create_model(default_cfg, obs_space, action_space)
-            load_pretrained_checkpoint(teacher, cfg.teacher_path, cfg.load_checkpoint_kind)
+            load_pretrained_checkpoint(
+                teacher, cfg.teacher_path, cfg.load_checkpoint_kind, normalize_returns=default_cfg.normalize_returns
+            )
 
         model = KickStarter(student, teacher, run_teacher_hs=cfg.run_teacher_hs)
         log.debug("Created kickstarter")
@@ -126,7 +136,9 @@ def make_nethack_actor_critic(cfg: Config, obs_space: ObsSpace, action_space: Ac
                     model, cfg, cfg.model_path, cfg.load_checkpoint_kind, create_model, obs_space, action_space
                 )
             else:
-                load_pretrained_checkpoint(model, cfg.model_path, cfg.load_checkpoint_kind)
+                load_pretrained_checkpoint(
+                    model, cfg.model_path, cfg.load_checkpoint_kind, normalize_returns=cfg.normalize_returns
+                )
             log.debug("Loading model from pretrained checkpoint")
 
     return model
