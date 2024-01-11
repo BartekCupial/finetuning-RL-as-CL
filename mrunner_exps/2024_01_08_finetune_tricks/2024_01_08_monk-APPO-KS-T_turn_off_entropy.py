@@ -14,7 +14,7 @@ config = {
     "num_envs_per_worker": 32,
     "worker_num_splits": 2,
     "rollout": 32,
-    "batch_size": 1024,  # this equals bs = 128, 128 * 32 = 4096
+    "batch_size": 4096,  # this equals bs = 128, 128 * 32 = 4096
     "async_rl": True,
     "serial_mode": False,
     "wandb_user": "bartekcupial",
