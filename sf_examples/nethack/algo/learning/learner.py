@@ -616,6 +616,10 @@ class DatasetLearner(Learner):
                         with self.param_server.policy_lock:
                             self.optimizer.step()
 
+                        self.cfg.kickstarting_loss_coeff *= self.cfg.kickstarting_loss_decay
+                        self.cfg.distillation_loss_coeff *= self.cfg.distillation_loss_decay
+                        self.cfg.supervised_loss_decay *= self.cfg.supervised_loss_decay
+
                         num_sgd_steps += 1
 
                 with torch.no_grad(), timing.add_time("after_optimizer"):
@@ -635,6 +639,10 @@ class DatasetLearner(Learner):
                         # dont have a better way to do this then to modify record summaries
                         for key, value in regularizer_loss_summaries.items():
                             stats_and_summaries[key] = value
+
+                        stats_and_summaries["kickstarting_loss_coeff"] = self.cfg.kickstarting_loss_coeff
+                        stats_and_summaries["distillation_loss_coeff"] = self.cfg.distillation_loss_coeff
+                        stats_and_summaries["supervised_loss_decay"] = self.cfg.supervised_loss_decay
 
                         del summary_vars
                         force_summaries = False
