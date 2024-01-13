@@ -53,6 +53,7 @@ params_grid = [
                 "critic_linear": 50_000_000,
             }
         ],
+        "warmup": [50_000_000],
     },
 ]
 
