@@ -29,10 +29,23 @@ config = {
     "use_resnet": True,
     "rnn_size": 1738,
     "h_dim": 1738,
+    "exploration_loss_coeff": 0.0,
 }
 
 # params different between exps
 params_grid = [
+    # {
+    #     "seed": list(range(1)),
+    #     "kickstarting_loss_coeff": [0.5],
+    #     "kickstarting_loss_decay": [1.0, 0.9999, 0.99996, 0.99998],
+    #     "learning_rate": [0.0001, 0.00001],
+    #     "use_pretrained_checkpoint": [True],
+    #     "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
+    #     "freeze": [{"encoder": 0, "core": 0, "decoder": 0, "action_parameterization": 0, "critic_linear": 0}],
+    #     "unfreeze": [{"action_parameterization": 50_000_000, "critic_linear": 50_000_000}],
+    #     "warmup": [50_000_000],
+    #     "reward_clip": [10000.0],
+    # },
     {
         "seed": list(range(1)),
         "kickstarting_loss_coeff": [0.5],
@@ -43,7 +56,7 @@ params_grid = [
         "freeze": [{"encoder": 0, "core": 0, "decoder": 0, "action_parameterization": 0, "critic_linear": 0}],
         "unfreeze": [{"action_parameterization": 50_000_000, "critic_linear": 50_000_000}],
         "warmup": [50_000_000],
-        "reward_clip": [10000.0],
+        "reward_scale": [0.001, 0.0001],
     },
 ]
 

@@ -29,6 +29,7 @@ config = {
     "use_resnet": True,
     "rnn_size": 1738,
     "h_dim": 1738,
+    "exploration_loss_coeff": 0.0,
 }
 
 # params different between exps
@@ -41,9 +42,15 @@ params_grid = [
         "use_pretrained_checkpoint": [True],
         "model_path": ["/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained"],
         "freeze": [{"encoder": 0, "core": 0, "decoder": 0, "action_parameterization": 0, "critic_linear": 0}],
-        "unfreeze": [{"action_parameterization": 50_000_000, "critic_linear": 50_000_000}],
+        "unfreeze": [
+            {
+                "core": 50_000_000,
+                "decoder": 50_000_000,
+                "action_parameterization": 50_000_000,
+                "critic_linear": 50_000_000,
+            }
+        ],
         "warmup": [50_000_000],
-        "reward_clip": [10000.0],
     },
 ]
 
