@@ -1,0 +1,382 @@
+,Name,Experience,Difficulty,Level
+0,Demogorgon,3297,57,50
+1,Asmodeus,3225,53,49
+2,Baalzebub,2333,45,41
+3,Dispater,1923,40,36
+4,Geryon,1625,36,33
+5,Orcus,1445,36,30
+6,Pestilence,1431,34,30
+7,Famine,1431,34,30
+8,Death,1431,34,30
+9,Wizard of Yendor,1411,34,30
+10,Vlad the Impaler,1087,32,14
+11,Master Kaen,1095,31,25
+12,Yeenoghu,1073,31,25
+13,high priest,1054,30,25
+14,Grand Master,1053,30,25
+15,Arch Priest,876,30,25
+16,arch-lich,915,29,25
+17,Juiblex,899,26,22
+18,Archon,730,26,19
+19,mail daemon,1,26,25
+20,Medusa,634,25,20
+21,Master of Thieves,588,24,20
+22,Cyclops,662,23,18
+23,Neferet the Green,593,23,20
+24,Norn,588,23,20
+25,Lord Sato,588,23,20
+26,King Arthur,588,23,20
+27,Chromatic Dragon,586,23,16
+28,Nalzok,585,23,16
+29,Minion of Huhetotl,585,23,16
+30,kraken,1574,22,20
+31,Croesus,746,22,20
+32,mastodon,611,22,20
+33,Shaman Karnov,583,22,20
+34,Pelias,583,22,20
+35,Orion,583,22,20
+36,Lord Carnarvon,583,22,20
+37,Hippocrates,583,22,20
+38,Twoflower,581,22,20
+39,Thoth Amon,547,22,16
+40,Ixoth,545,22,15
+41,iron golem,545,22,18
+42,ki-rin,552,21,16
+43,master lich,494,21,17
+44,balrog,575,20,16
+45,titan,553,20,16
+46,yellow dragon,535,20,15
+47,white dragon,535,20,15
+48,silver dragon,535,20,15
+49,red dragon,535,20,15
+50,orange dragon,535,20,15
+51,green dragon,535,20,15
+52,gray dragon,535,20,15
+53,blue dragon,535,20,15
+54,black dragon,535,20,15
+55,Master Assassin,503,20,15
+56,Dark One,498,20,15
+57,storm giant,536,19,16
+58,Ashikaga Takauji,488,19,15
+59,Lord Surtur,486,19,15
+60,Angel,485,19,14
+61,master mind flayer,416,19,13
+62,jabberwock,489,18,15
+63,glass golem,409,18,16
+64,demilich,376,18,14
+65,minotaur,504,17,15
+66,Scorpius,474,17,15
+67,purple worm,474,17,15
+68,Nazgul,376,17,13
+69,pit fiend,422,16,13
+70,Olog-hai,325,16,13
+71,guardian naga,295,16,12
+72,stone golem,345,15,14
+73,nalfeshnee,341,15,11
+74,baluchitherium,331,15,14
+75,sandestin,308,15,13
+76,aligned priest,294,15,12
+77,shopkeeper,287,15,12
+78,vampire lord,399,14,12
+79,skeleton,359,14,12
+80,shade,357,14,12
+81,ice devil,351,14,11
+82,disenchanter,301,14,12
+83,hell hound,290,14,12
+84,guard,284,14,12
+85,captain,277,14,12
+86,prisoner,272,14,12
+87,trapper,270,14,12
+88,lich,269,14,11
+89,frost giant,296,13,10
+90,ettin,291,13,10
+91,Oracle,286,13,12
+92,bone devil,285,13,9
+93,baby yellow dragon,272,13,12
+94,baby white dragon,272,13,12
+95,baby silver dragon,272,13,12
+96,baby red dragon,272,13,12
+97,baby orange dragon,272,13,12
+98,baby green dragon,272,13,12
+99,baby gray dragon,272,13,12
+100,baby blue dragon,272,13,12
+101,baby black dragon,272,13,12
+102,titanothere,267,13,12
+103,mind flayer,263,13,9
+104,water troll,246,13,11
+105,nurse,245,13,11
+106,golden naga,239,13,10
+107,vampire,327,12,10
+108,Aleax,298,12,10
+109,hezrou,267,12,9
+110,clay golem,249,12,11
+111,ghost,238,12,10
+112,queen bee,225,12,9
+113,watch captain,221,12,10
+114,valkyrie,221,12,10
+115,tourist,221,12,10
+116,samurai,221,12,10
+117,rogue,221,12,10
+118,lieutenant,221,12,10
+119,knight,221,12,10
+120,black pudding,221,12,10
+121,barbarian,221,12,10
+122,archeologist,221,12,10
+123,wizard,216,12,10
+124,ranger,216,12,10
+125,priestess,216,12,10
+126,priest,216,12,10
+127,healer,216,12,10
+128,elf,216,12,10
+129,cavewoman,216,12,10
+130,caveman,216,12,10
+131,lurker above,214,12,10
+132,ice troll,205,12,9
+133,rock troll,198,12,9
+134,umber hulk,194,12,9
+135,salamander,159,12,8
+136,fire giant,254,11,9
+137,monk,211,11,10
+138,winged gargoyle,207,11,9
+139,water demon,196,11,8
+140,Elvenking,196,11,9
+141,ogre king,194,11,9
+142,doppelganger,191,11,9
+143,zruty,186,11,9
+144,giant mimic,186,11,9
+145,couatl,180,11,8
+146,marilith,177,11,7
+147,vrock,176,11,8
+148,xorn,139,11,8
+149,elf-lord,123,11,8
+150,electric eel,1129,10,7
+151,flesh golem,186,10,9
+152,barbed devil,179,10,8
+153,hill giant,174,10,8
+154,erinys,158,10,7
+155,fire vortex,142,10,8
+156,fire elemental,134,10,8
+157,black naga,132,10,8
+158,water elemental,126,10,8
+159,earth elemental,126,10,8
+160,air elemental,126,10,8
+161,sergeant,118,10,8
+162,giant mummy,116,10,8
+163,cobra,90,10,6
+164,long worm,169,10,8
+165,horned devil,147,9,6
+166,xan,120,9,7
+167,wumpus,118,9,8
+168,stalker,113,9,8
+169,large mimic,113,9,8
+170,giant zombie,113,9,8
+171,baby purple worm,113,9,8
+172,baby long worm,113,9,8
+173,steam vortex,112,9,7
+174,glass piercer,106,9,7
+175,shark,104,9,7
+176,winter wolf,102,9,7
+177,hell hound pup,102,9,7
+178,energy vortex,101,9,6
+179,warhorse,97,9,7
+180,troll,97,9,7
+181,ogre lord,97,9,7
+182,sasquatch,95,9,7
+183,pit viper,93,9,6
+184,quantum mechanic,92,9,7
+185,mountain centaur,88,9,6
+186,green slime,164,8,6
+187,cockatrice,149,8,5
+188,stone giant,127,8,6
+189,giant,127,8,6
+190,succubus,122,8,6
+191,incubus,122,8,6
+192,wraith,120,8,6
+193,djinni,97,8,7
+194,gargoyle,95,8,6
+195,wood golem,92,8,7
+196,warg,92,8,7
+197,small mimic,92,8,7
+198,ettin mummy,92,8,7
+199,shocking sphere,91,8,6
+200,freezing sphere,91,8,6
+201,flaming sphere,91,8,6
+202,ochre jelly,88,8,6
+203,dwarf king,83,8,6
+204,red naga,82,8,6
+205,python,82,8,6
+206,pyrolisk,82,8,6
+207,watchman,78,8,6
+208,soldier,78,8,6
+209,Grey-elf,78,8,6
+210,leocrotta,76,8,6
+211,gelatinous cube,76,8,6
+212,carnivorous ape,76,8,6
+213,tiger,73,8,6
+214,guide,71,8,5
+215,apprentice,71,8,5
+216,acolyte,71,8,5
+217,rust monster,70,8,5
+218,scorpion,67,8,5
+219,abbot,66,8,5
+220,forest centaur,64,8,5
+221,gremlin,61,8,5
+222,giant eel,1075,7,5
+223,chickatrice,136,7,4
+224,owlbear,94,7,5
+225,barrow wight,90,7,3
+226,tengu,76,7,6
+227,large dog,76,7,6
+228,large cat,76,7,6
+229,ice vortex,74,7,5
+230,black light,74,7,5
+231,leather golem,73,7,6
+232,human mummy,73,7,6
+233,ettin zombie,73,7,6
+234,elf mummy,73,7,6
+235,crocodile,73,7,6
+236,chameleon,73,7,6
+237,mumak,68,7,5
+238,warrior,66,7,5
+239,vampire bat,66,7,5
+240,thug,66,7,5
+241,roshi,66,7,5
+242,page,66,7,5
+243,orc-captain,66,7,5
+244,ninja,66,7,5
+245,winter wolf cub,64,7,5
+246,giant spider,64,7,5
+247,student,61,7,5
+248,ogre,61,7,5
+249,neanderthal,61,7,5
+250,hunter,61,7,5
+251,horse,61,7,5
+252,Green-elf,61,7,5
+253,chieftain,61,7,5
+254,attendant,61,7,5
+255,yeti,59,7,5
+256,panther,59,7,5
+257,lynx,59,7,5
+258,werewolf,56,7,5
+259,water moccasin,48,7,4
+260,quasit,36,7,3
+261,iron piercer,63,6,5
+262,werewolf,61,6,5
+263,spotted jelly,61,6,5
+264,gnome king,61,6,5
+265,quivering blob,59,6,5
+266,wolf,56,6,5
+267,piranha,56,6,5
+268,orc mummy,56,6,5
+269,lizard,56,6,5
+270,gold golem,56,6,5
+271,giant beetle,56,6,5
+272,dwarf mummy,56,6,5
+273,brown pudding,56,6,5
+274,dust vortex,54,6,4
+275,white unicorn,51,6,4
+276,gray unicorn,51,6,4
+277,dwarf lord,51,6,4
+278,black unicorn,51,6,4
+279,plains centaur,49,6,4
+280,snake,48,6,4
+281,Woodland-elf,46,6,4
+282,raven,46,6,4
+283,Kop Kaptain,46,6,4
+284,rope golem,44,6,4
+285,jaguar,44,6,4
+286,ape,41,6,4
+287,soldier ant,37,6,3
+288,fire ant,34,6,3
+289,blue jelly,45,5,4
+290,yellow light,44,5,3
+291,housecat,44,5,4
+292,dog,44,5,4
+293,dingo,44,5,4
+294,human zombie,41,5,4
+295,gnome mummy,41,5,4
+296,orc shaman,38,5,3
+297,gnomish wizard,38,5,3
+298,violet fungus,34,5,3
+299,jellyfish,34,5,3
+300,Uruk-hai,33,5,3
+301,Mordor orc,33,5,3
+302,Kop Lieutenant,33,5,3
+303,bugbear,33,5,3
+304,killer bee,31,5,1
+305,wood nymph,28,5,3
+306,water nymph,28,5,3
+307,mountain nymph,28,5,3
+308,lemure,28,5,3
+309,ghoul,28,5,3
+310,leprechaun,59,4,5
+311,fog cloud,38,4,3
+312,woodchuck,35,4,3
+313,rock mole,35,4,3
+314,imp,33,4,3
+315,gnome lord,33,4,3
+316,pony,31,4,3
+317,straw golem,28,4,3
+318,rock piercer,28,4,3
+319,red naga hatchling,28,4,3
+320,paper golem,28,4,3
+321,kobold mummy,28,4,3
+322,guardian naga hatchling,28,4,3
+323,gray ooze,28,4,3
+324,golden naga hatchling,28,4,3
+325,elf zombie,28,4,3
+326,black naga hatchling,28,4,3
+327,baby crocodile,28,4,3
+328,kobold shaman,27,4,2
+329,Kop Sergeant,22,4,2
+330,hill orc,22,4,2
+331,dwarf,22,4,2
+332,giant ant,20,4,2
+333,centipede,19,4,2
+334,wererat,17,4,2
+335,werejackal,17,4,2
+336,rothe,17,4,2
+337,rabid rat,17,4,2
+338,monkey,17,4,2
+339,wererat,22,3,2
+340,werejackal,22,3,2
+341,kobold lord,22,3,2
+342,giant bat,22,3,2
+343,little dog,20,3,2
+344,kitten,20,3,2
+345,homunculus,19,3,2
+346,orc zombie,17,3,2
+347,iguana,17,3,2
+348,floating eye,17,3,2
+349,dwarf zombie,17,3,2
+350,orc,13,3,1
+351,Keystone Kop,13,3,1
+352,hobgoblin,13,3,1
+353,gnome,13,3,1
+354,manes,8,3,1
+355,garter snake,8,3,1
+356,cave spider,8,3,1
+357,shrieker,28,2,3
+358,large kobold,13,2,1
+359,hobbit,13,2,1
+360,gas spore,12,2,1
+361,red mold,9,2,1
+362,green mold,9,2,1
+363,brown mold,9,2,1
+364,acid blob,9,2,1
+365,yellow mold,8,2,1
+366,gnome zombie,8,2,1
+367,giant rat,8,2,1
+368,gecko,8,2,1
+369,coyote,8,2,1
+370,human,6,2,0
+371,bat,6,2,0
+372,kobold,6,1,0
+373,goblin,6,1,0
+374,lichen,4,1,0
+375,fox,4,1,0
+376,sewer rat,1,1,0
+377,newt,1,1,0
+378,kobold zombie,1,1,0
+379,jackal,1,1,0
+380,grid bug,1,1,0
