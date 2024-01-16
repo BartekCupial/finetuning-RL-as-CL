@@ -620,6 +620,30 @@ class DatasetLearner(Learner):
                         self.cfg.distillation_loss_coeff *= self.cfg.distillation_loss_decay
                         self.cfg.supervised_loss_decay *= self.cfg.supervised_loss_decay
 
+                        if self.cfg.substitute_regularization_with_exploration:
+                            self.cfg.exploration_loss_coeff = max(
+                                max(self.cfg.min_kickstarting_loss_coeff - self.cfg.kickstarting_loss_coeff, 0),
+                                self.cfg.exploration_loss_coeff,
+                            )
+                            self.cfg.exploration_loss_coeff = max(
+                                max(self.cfg.min_distillation_loss_coeff - self.cfg.distillation_loss_coeff, 0),
+                                self.cfg.exploration_loss_coeff,
+                            )
+                            self.cfg.exploration_loss_coeff = max(
+                                max(self.cfg.min_supervised_loss_coeff - self.cfg.supervised_loss_coeff, 0),
+                                self.cfg.exploration_loss_coeff,
+                            )
+                        else:
+                            self.cfg.kickstarting_loss_coeff = max(
+                                self.cfg.kickstarting_loss_coeff, self.cfg.min_kickstarting_loss_coeff
+                            )
+                            self.cfg.distillation_loss_coeff = max(
+                                self.cfg.distillation_loss_coeff, self.cfg.min_distillation_loss_coeff
+                            )
+                            self.cfg.supervised_loss_decay = max(
+                                self.cfg.supervised_loss_coeff, self.cfg.min_supervised_loss_coeff
+                            )
+
                         num_sgd_steps += 1
 
                 with torch.no_grad(), timing.add_time("after_optimizer"):
