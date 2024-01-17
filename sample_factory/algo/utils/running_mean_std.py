@@ -74,17 +74,10 @@ class RunningMeanStdInPlace(nn.Module):
         batch_count: int,
         ema_decay: float,
     ):
-        delta = batch_mean - mean
         tot_count = count + batch_count
 
-        new_mean = mean + delta * batch_count / tot_count
-        m_a = var * count
-        m_b = batch_var * batch_count
-        M2 = m_a + m_b + (delta**2) * count * batch_count / tot_count
-        new_var = M2 / tot_count
-
-        decay_mean = mean * ema_decay + new_mean * (1 - ema_decay)
-        decay_var = var * ema_decay + new_var * (1 - ema_decay)
+        decay_mean = mean * ema_decay + batch_mean * (1 - ema_decay)
+        decay_var = var * ema_decay + batch_var * (1 - ema_decay)
         return decay_mean, decay_var, tot_count
 
     def forward(self, x: Tensor, denormalize: bool = False) -> None:
