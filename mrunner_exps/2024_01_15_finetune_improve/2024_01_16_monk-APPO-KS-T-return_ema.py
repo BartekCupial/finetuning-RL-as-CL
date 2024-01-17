@@ -51,7 +51,8 @@ params_grid = [
                 "critic_linear": 50_000_000,
             }
         ],
-        "ema_decay_return": [0.9999, 0.999, 0.99],
+        "ema_decay_return": [0.9, 0.9999, 0.999, 0.99],
+        "reward_scale": [0.01],
     },
 ]
 
