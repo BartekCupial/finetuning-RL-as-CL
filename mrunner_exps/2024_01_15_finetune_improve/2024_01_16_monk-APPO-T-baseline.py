@@ -28,6 +28,8 @@ config = {
     "h_dim": 1738,
     "gamma": 1.0,
     "warmup": 50_000_000,
+    "use_pretrained_checkpoint": True,
+    "model_path": "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained",
 }
 
 # params different between exps

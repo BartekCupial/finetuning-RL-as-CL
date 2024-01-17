@@ -35,15 +35,6 @@ params_grid = [
         "seed": list(range(1)),
         "learning_rate": [0.0001, 0.00001],
         "exploration_loss_coeff": [0.0001, 0.001, 0.01],
-        "freeze": [{"encoder": 0, "core": 0, "decoder": 0, "action_parameterization": 0, "critic_linear": 0}],
-        "unfreeze": [
-            {
-                "core": 50_000_000,
-                "decoder": 50_000_000,
-                "action_parameterization": 50_000_000,
-                "critic_linear": 50_000_000,
-            }
-        ],
     },
 ]
 

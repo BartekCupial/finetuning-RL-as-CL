@@ -51,7 +51,7 @@ params_grid = [
                 "critic_linear": 50_000_000,
             }
         ],
-        "min_kickstarting_loss_coeff": [0.05, 0.01, 0.005, 0.001],
+        "min_kickstarting_loss_coeff": [0.25, 0.2, 0.15, 0.1, 0.05, 0.01, 0.005, 0.001],
         "substitute_regularization_with_exploration": [False, True],
     },
 ]
