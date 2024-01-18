@@ -1,25 +1,23 @@
 import gymnasium as gym
 
 from sf_examples.nethack.utils.blstats import BLStats
-from sf_examples.nethack.utils.variables import DeepDungeonLevel, DungeonLevel, Monster, Score
+from sf_examples.nethack.utils.score import Score
 
 
 class VariablesInfoWrapper(gym.Wrapper):
     def __init__(self, env: gym.Env):
         super().__init__(env)
+        self.score = Score()
 
-        self.variables = [
-            Monster(),
-            DungeonLevel(),
-            DeepDungeonLevel(),
-            Score(),
-        ]
+    def _parse_score(self, last_observation, observation, end_status):
+        scores = self.score.get_value(self.env.unwrapped, last_observation, observation, end_status)
 
-    def _parse_variables(self, last_observation, observation, end_status):
         values = {}
-        for variable in self.variables:
-            name = variable.name.upper()
-            values[name] = variable.get_value(self.env.unwrapped, last_observation, observation, end_status)
+        for name, value in scores.items():
+            values[name] = value
+
+        # we have gold in blstats
+        del values["GOLD"]
 
         return values
 
@@ -49,8 +47,7 @@ class VariablesInfoWrapper(gym.Wrapper):
         return blstats_info
 
     def reset(self, **kwargs):
-        for task in self.variables:
-            task.reset_value()
+        self.score.reset()
 
         # use tuple and copy to avoid shallow copy (`last_observation` would be the same as `observation`)
         last_observation = tuple(a.copy() for a in self.env.unwrapped.last_observation)
@@ -60,9 +57,9 @@ class VariablesInfoWrapper(gym.Wrapper):
         end_status = self.env.unwrapped.StepStatus.RUNNING
         info["end_status"] = end_status
 
-        new_info = self._parse_variables(last_observation, observation, end_status)
+        score_info = self._parse_score(last_observation, observation, end_status)
         blstats_info = self._parse_blstats(observation)
-        info = {**info, **blstats_info, **new_info}
+        info = {**info, **blstats_info, **score_info}
 
         return obs, info
 
@@ -73,8 +70,8 @@ class VariablesInfoWrapper(gym.Wrapper):
         observation = tuple(a.copy() for a in self.env.unwrapped.last_observation)
         end_status = info["end_status"]
 
-        new_info = self._parse_variables(last_observation, observation, end_status)
+        score_info = self._parse_score(last_observation, observation, end_status)
         blstats_info = self._parse_blstats(observation)
-        info = {**info, **blstats_info, **new_info}
+        info = {**info, **blstats_info, **score_info}
 
         return obs, reward, terminated, truncated, info
