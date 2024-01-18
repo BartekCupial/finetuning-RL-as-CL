@@ -3,7 +3,7 @@ import pandas as pd
 monster_data = pd.read_csv("sf_examples/nethack/utils/reward_shaping/monster_data.csv")
 
 
-def monster_score(monster_name, dungeon_level, player_level, score_coeff=4.0):
+def monster_score(monster_name, dungeon_level, player_level):
     # inspied by https://www.steelypips.org/nethack/experience-spoiler.html
 
     monster_exp = (monster_data[monster_data["Name"] == monster_name]["Experience"]).iloc[0]
@@ -22,8 +22,7 @@ def monster_score(monster_name, dungeon_level, player_level, score_coeff=4.0):
     # Final XP calculation
     final_xp = monster_exp + (2 * monster_level + 1)
 
-    # Score calculation
-    score = score_coeff * final_xp
+    score = 4 * final_xp
 
     return score
 
