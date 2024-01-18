@@ -168,19 +168,23 @@ class Score:
             glyphs = observation[env._glyph_index]
             last_glyphs = last_observation[env._glyph_index]
 
-            some = False
+            some = 0
             for score_fn in self.score_functions:
                 if score_fn(last_blstats, blstats, last_glyphs, glyphs, last_message, message, points):
-                    some = True
+                    some += 1
                     key = self.score_functions_keys[score_fn.__name__.upper()]
                     self.scores[key] += points
 
-            if not some:
-                if self.identify_unknown(last_blstats, blstats, last_message, message, points):
+            if some == 0:
+                if self.identify_unknown(last_blstats, blstats, last_glyphs, glyphs, last_message, message, points):
                     key = "IDENTIFY"
                     self.scores[key] += points
 
-                # with open("logs.txt", "a+") as f:
-                #     f.write(f"last_message: {last_message}, message: {message}, points: {points}\n")
+                with open("logs.txt", "a+") as f:
+                    f.write(f"last_message: {last_message}, message: {message}, points: {points}\n")
+            elif some > 1:
+                # right now this happens when we kill our pet
+                with open("logs.txt", "a+") as f:
+                    f.write(f"last_message: {last_message}, message: {message}, points: {points}\n")
 
         return self.scores
