@@ -6,9 +6,9 @@ name = globals()["script"][:-3]
 config = {
     "env": "challenge",
     "exp_tags": [name],
-    "exp_point": "monk-APPO-BC-T",
+    "exp_point": "monk-APPO-KS-T",
     "train_for_env_steps": 500_000_000,
-    "group": "monk-APPO-BC-T",
+    "group": "monk-APPO-KS-T",
     "character": "mon-hum-neu-mal",
     "num_workers": 16,
     "num_envs_per_worker": 32,
@@ -21,12 +21,9 @@ config = {
     "wandb_project": "sf2_nethack",
     "wandb_group": "gmum",
     "with_wandb": True,
-    "use_dataset": True,
-    "dataset_rollout": 32,
-    "dataset_batch_size": 4096,  # this equals bs = 256, 256 * 32 = 8192
     "use_pretrained_checkpoint": True,
     "model_path": "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained",
-    "distillation_loss_coeff": 0.5,
+    "kickstarting_loss_coeff": 0.5,
     "teacher_path": "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained",
     "run_teacher_hs": False,
     "use_prev_action": True,
@@ -37,26 +34,21 @@ config = {
     "exploration_loss_coeff": 0.0,
     "gamma": 1.0,
     "reward_scale": 0.01,
-    "warmup": 50_000_000,
+    "kickstarting_loss_decay": 0.99998,
+    "min_kickstarting_loss_coeff": 0.25,
+    "skip_train": 25_000_000,
 }
 
 # params different between exps
 params_grid = [
     {
         "seed": list(range(1)),
-        "learning_rate": [0.0001],
-        "distillation_loss_coeff": [2.0, 1.0, 0.5],
-        "distillation_loss_decay": [0.99996, 0.99998, 1.0],
-        "min_distillation_loss_coeff": [0.25],
-        "freeze": [{"encoder": 0, "core": 0, "decoder": 0, "action_parameterization": 0, "critic_linear": 0}],
-        "unfreeze": [
-            {
-                "core": 50_000_000,
-                "decoder": 50_000_000,
-                "action_parameterization": 50_000_000,
-                "critic_linear": 50_000_000,
-            }
-        ],
+        "learning_rate": [0.0001, 0.00001],
+    },
+    {
+        "seed": list(range(1)),
+        "learning_rate": [0.0001, 0.00001],
+        "freeze": [{"encoder": 0}],
     },
 ]
 

@@ -35,9 +35,8 @@ config = {
     "rnn_size": 1738,
     "h_dim": 1738,
     "exploration_loss_coeff": 0.0,
-    "gamma": 1.0,
     "reward_scale": 0.01,
-    "warmup": 50_000_000,
+    "gamma": 1.0,
 }
 
 # params different between exps
@@ -48,15 +47,7 @@ params_grid = [
         "distillation_loss_coeff": [2.0, 1.0, 0.5],
         "distillation_loss_decay": [0.99996, 0.99998, 1.0],
         "min_distillation_loss_coeff": [0.25],
-        "freeze": [{"encoder": 0, "core": 0, "decoder": 0, "action_parameterization": 0, "critic_linear": 0}],
-        "unfreeze": [
-            {
-                "core": 50_000_000,
-                "decoder": 50_000_000,
-                "action_parameterization": 50_000_000,
-                "critic_linear": 50_000_000,
-            }
-        ],
+        "freeze": [{"encoder": 0}],
     },
 ]
 
