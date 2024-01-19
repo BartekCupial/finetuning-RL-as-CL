@@ -9,18 +9,43 @@ from sample_factory.algo.utils.misc import EPS
 from sample_factory.envs.env_utils import RewardShapingInterface
 from sample_factory.utils.utils import log
 
+GAME_REWARD = dict(
+    delta=dict(
+        KILL_MONSTER=(1, -1),
+        IDENTIFY=(1, -1),
+        EAT_TRIPE_RATION=(1, -1),
+        QUAFFLE_FROM_SINK=(1, -1),
+        READ_NOVEL=(1, -1),
+        REACH_ORACLE=(1, -1),
+        LEVEL_REACHED=(1, -1),
+        DEEP_LEVEL_REACHED=(1, -1),
+    )
+)
+
 REWARD_SHAPING = dict(
     delta=dict(
-        MONSTER_SCORE=(1, -1),
-        HEALTH=(),
-        WAND_IDENTIFY=(0.5, -0.5),
-        POTION_IDENTIFY=(0.5, -0.5),
-        SCROLL_IDENTIFY=(0.5, -0.5),
-        DLVL_REACHED=(0.5, -0.5),
-        DEEP_DLVL_REACHED=(0.5, -0.5),
-        GOLD_SCORE=(0.01, -0.01),
-        EATING_SCORE=(0.01, -0.01),
-        SCOUT_SCORE=(0.01, -0.01),
+        STRENGTH=(100, -100),
+        DEXTERITY=(100, -100),
+        CONSTITUTION=(100, -100),
+        INTELLIGENCE=(100, -100),
+        WISDOM=(100, -100),
+        CHARISMA=(100, -100),
+        HITPOINTS=(1, -1),
+        MAX_HITPOINTS=(10, -10),
+        GOLD=(1, -0.5),
+        ENERGY=(0.01, -0.01),
+        MAX_ENERGY=(10, -10),
+        ARMOR_CLASS=(100, -100),
+        EXPERIENCE_LEVEL=(100, -100),
+        EXPERIENCE_POINTS=(0.01, -0.01),
+        KILL_MONSTER=(1, -1),
+        IDENTIFY=(1, -1),
+        EAT_TRIPE_RATION=(1, -1),
+        QUAFFLE_FROM_SINK=(1, -1),
+        READ_NOVEL=(1, -1),
+        REACH_ORACLE=(1, -1),
+        LEVEL_REACHED=(1, -1),
+        DEEP_LEVEL_REACHED=(1, -1),
     )
 )
 
@@ -29,7 +54,7 @@ def true_objective_winning_the_game(info):
     # TODO: for now define true objective as game score
     # but we also could test reaching as deep into the dungeon as possible
     # eventually solving the game
-    pass
+    return info["true_objective"]
 
 
 class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
@@ -42,7 +67,8 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
         self.reward_shaping_scheme = reward_shaping_scheme
         self.true_objective_func: Callable = true_objective_func
 
-        # TODO: do we need this?
+        # TODO: do we need this? we could use this to cap the monster scores
+        # at some point to encourage getting score for dungeon depth
         self.reward_delta_limits = dict()
 
         self.prev_vars = dict()
@@ -54,7 +80,7 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
 
         self.reward_structure = {}
 
-        self.verbose = False
+        self.verbose = True
         self.print_once = False
 
         # save a reference to this wrapper in the actual env class, for other wrappers
@@ -67,12 +93,47 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
         self.reward_shaping_scheme = reward_shaping
 
     def _delta_rewards(self, info):
-        # TODO:
-        pass
+        reward = 0.0
+        deltas = []
+
+        for var_name, rewards in self.reward_shaping_scheme["delta"].items():
+            if var_name not in self.prev_vars:
+                continue
+
+            # generate reward based on how the env variable values changed
+            new_value = info.get(var_name, 0.0)
+            prev_value = self.prev_vars[var_name]
+            delta = new_value - prev_value
+
+            if var_name in self.reward_delta_limits:
+                delta = min(delta, self.reward_delta_limits[var_name])
+
+            if abs(delta) > EPS:
+                if delta > EPS:
+                    reward_delta = delta * rewards[0]
+                else:
+                    reward_delta = -delta * rewards[1]
+
+                reward += reward_delta
+                deltas.append((var_name, reward_delta, delta))
+                self.reward_structure[var_name] = self.reward_structure.get(var_name, 0.0) + reward_delta
+
+        return reward, deltas
 
     def _parse_info(self, info, done):
-        # TODO:
-        pass
+        if self.reward_shaping_scheme is None:
+            # skip reward calculation
+            return 0.0
+
+        shaping_reward = 0.0
+        if not done:
+            shaping_reward, deltas = self._delta_rewards(info)
+
+        # TODO: change reward for killing a monster
+        if shaping_reward > 0:
+            print("")
+
+        return shaping_reward
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
@@ -96,6 +157,34 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
         self.orig_env_reward += rew
 
         shaping_rew = self._parse_info(info, done)
+        # IMPORTANT: we use shaping reward as a substitue for reward
+        rew = shaping_rew
+        self.total_shaping_reward += shaping_rew
+
+        if self.verbose:
+            log.info("Original env reward before shaping: %.3f", self.orig_env_reward)
+
+            log.info(
+                "Total shaping reward is %.3f (done %d)",
+                self.total_shaping_reward,
+                done,
+            )
+
+        # remember new variable values
+        for var_name in self.reward_shaping_scheme["delta"].keys():
+            self.prev_vars[var_name] = info.get(var_name, 0.0)
+
+        self.prev_dead = not not info.get("DEAD", 0.0)  # float -> bool
+
+        if done:
+            if self.true_objective_func is None:
+                true_objective = self.orig_env_reward
+            else:
+                true_objective = self.true_objective_func(info)
+
+            info["true_objective"] = true_objective
+
+        return obs, rew, terminated, truncated, info
 
     def close(self):
         self.env.unwrapped.reward_shaping_interface = None

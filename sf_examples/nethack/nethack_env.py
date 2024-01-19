@@ -16,12 +16,15 @@ from sf_examples.nethack.utils.tasks import (
 )
 from sf_examples.nethack.utils.wrappers import (
     BlstatsInfoWrapper,
+    NetHackRewardShapingWrapper,
     PrevActionWrapper,
     RecordAnsi,
     RenderCharImagesWithNumpyWrapperV2,
     SeedActionSpaceWrapper,
     TaskRewardsInfoWrapper,
+    VariablesInfoWrapper,
 )
+from sf_examples.nethack.utils.wrappers.reward_shaping import GAME_REWARD
 
 NETHACK_ENVS = dict(
     staircase=NetHackStaircase,
@@ -125,6 +128,10 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
     if cfg.add_stats_to_info:
         env = BlstatsInfoWrapper(env)
         env = TaskRewardsInfoWrapper(env)
+
+    if cfg.reward_shaping:
+        env = VariablesInfoWrapper(env)
+        env = NetHackRewardShapingWrapper(env, GAME_REWARD)
 
     if env_config:
         if env_config["env_id"] == 0:

@@ -5,6 +5,7 @@ from sf_examples.nethack.utils.wrappers.render_char_images import (
     RenderCharImagesWithNumpyWrapper,
     RenderCharImagesWithNumpyWrapperV2,
 )
+from sf_examples.nethack.utils.wrappers.reward_shaping import NetHackRewardShapingWrapper
 from sf_examples.nethack.utils.wrappers.seed_action_space import SeedActionSpaceWrapper
 from sf_examples.nethack.utils.wrappers.task_rewards_info import TaskRewardsInfoWrapper
 from sf_examples.nethack.utils.wrappers.variables_info import VariablesInfoWrapper
@@ -18,4 +19,5 @@ __all__ = [
     SeedActionSpaceWrapper,
     TaskRewardsInfoWrapper,
     VariablesInfoWrapper,
+    NetHackRewardShapingWrapper,
 ]
