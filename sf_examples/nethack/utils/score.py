@@ -14,7 +14,7 @@ class Score:
         self.monster_names = list(monster_data["Name"])
         self.score_functions = [
             self.kill_monster,
-            self.kill_pet,
+            # self.kill_pet,
             self.identify_wand,
             self.identify_potion,
             self.identify_scroll,
@@ -60,9 +60,9 @@ class Score:
             )  # TODO: handle halluc monsters, right now there is a possibility that we destroyed an item.
         )
 
-    def kill_pet(self, last_blstats, blstats, last_glyphs, glyphs, last_message, message, points):
-        # I figured it would be useful to treat pet differently
-        return re.match(r".*You hear the rumble of distant thunder.*", message)
+    # def kill_pet(self, last_blstats, blstats, last_glyphs, glyphs, last_message, message, points):
+    #     # I figured it would be useful to treat pet differently
+    #     return re.match(r".*You hear the rumble of distant thunder.*", message)
 
     def identify_wand(self, last_blstats, blstats, last_glyphs, glyphs, last_message, message, points):
         # Identifying a wand by engraving or zapping — 10 points
@@ -181,10 +181,9 @@ class Score:
                     self.scores[key] += points
 
                 with open("logs.txt", "a+") as f:
-                    f.write(f"last_message: {last_message}, message: {message}, points: {points}\n")
+                    f.write(f"some: {some}, last_message: {last_message}, message: {message}, points: {points}\n")
             elif some > 1:
-                # right now this happens when we kill our pet
                 with open("logs.txt", "a+") as f:
-                    f.write(f"last_message: {last_message}, message: {message}, points: {points}\n")
+                    f.write(f"some: {some}, last_message: {last_message}, message: {message}, points: {points}\n")
 
         return self.scores
