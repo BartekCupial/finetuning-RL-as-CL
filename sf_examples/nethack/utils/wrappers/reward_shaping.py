@@ -8,6 +8,7 @@ import gymnasium as gym
 from sample_factory.algo.utils.misc import EPS
 from sample_factory.envs.env_utils import RewardShapingInterface
 from sample_factory.utils.utils import log
+from sf_examples.nethack.utils.blstats import BLStats
 
 GAME_REWARD = dict(
     delta=dict(
@@ -19,6 +20,7 @@ GAME_REWARD = dict(
         REACH_ORACLE=(1, -1),
         LEVEL_REACHED=(1, -1),
         DEEP_LEVEL_REACHED=(1, -1),
+        OTHER=(1, -1),
     )
 )
 
@@ -72,7 +74,7 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
         self.reward_delta_limits = dict()
 
         self.prev_vars = dict()
-        self.prev_dead = True
+        self.sokoban_level = None
 
         self.orig_env_reward = self.total_shaping_reward = 0.0
 
@@ -80,7 +82,7 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
 
         self.reward_structure = {}
 
-        self.verbose = True
+        self.verbose = False
         self.print_once = False
 
         # save a reference to this wrapper in the actual env class, for other wrappers
@@ -120,6 +122,20 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
 
         return reward, deltas
 
+    def _monster_kill_reward(self, blstats):
+        dungeon_level = blstats.depth
+
+        # check if we are in sokoban
+        # we have to calculate dlvl differently in sokoban https://nethackwiki.com/wiki/Dungeon_level
+        if blstats.dungeon_number == 4:
+            if self.sokoban_level is None:
+                # save the level when sokoban first appeared
+                self.sokoban_level = dungeon_level
+            # set the difficulty to custom sokoban
+            dungeon_level = 2 * self.sokoban_level - dungeon_level + 2
+
+        return 4 * dungeon_level**2
+
     def _parse_info(self, info, done):
         if self.reward_shaping_scheme is None:
             # skip reward calculation
@@ -129,9 +145,13 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
         if not done:
             shaping_reward, deltas = self._delta_rewards(info)
 
-        # TODO: change reward for killing a monster
-        if shaping_reward > 0:
-            print("")
+            # change the reward for killing a monster
+            for var_name, reward_delta, delta in deltas:
+                if var_name == "KILL_MONSTER":
+                    shaping_reward -= reward_delta
+
+                    blstats = BLStats(*self.env.unwrapped.last_observation[self.env.unwrapped._blstats_index])
+                    shaping_reward += self._monster_kill_reward(blstats)
 
         return shaping_reward
 
@@ -139,7 +159,7 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
         obs, info = self.env.reset(**kwargs)
 
         self.prev_vars = dict()
-        self.prev_dead = True
+        self.sokoban_level = None
         self.reward_structure = dict()
 
         self.orig_env_reward = self.total_shaping_reward = 0.0
@@ -173,8 +193,6 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
         # remember new variable values
         for var_name in self.reward_shaping_scheme["delta"].keys():
             self.prev_vars[var_name] = info.get(var_name, 0.0)
-
-        self.prev_dead = not not info.get("DEAD", 0.0)  # float -> bool
 
         if done:
             if self.true_objective_func is None:

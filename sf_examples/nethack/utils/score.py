@@ -32,6 +32,7 @@ class Score:
         self.score_functions_keys["identify_scroll".upper()] = "IDENTIFY"
 
         self.scores = {v: 0 for v in self.score_functions_keys.values()}
+        self.scores["OTHER"] = 0
 
         self.oracle_glyph = None
         for glyph in range(nethack.GLYPH_MON_OFF, nethack.GLYPH_PET_OFF):
@@ -42,6 +43,7 @@ class Score:
 
     def reset(self):
         self.scores = {v: 0 for v in self.score_functions_keys.values()}
+        self.scores["OTHER"] = 0
 
     def kill_monster(self, last_blstats, blstats, last_glyphs, glyphs, last_message, message, points):
         # Killing a monster — worth 4 times the monster's experience points
@@ -179,6 +181,8 @@ class Score:
                 if self.identify_unknown(last_blstats, blstats, last_glyphs, glyphs, last_message, message, points):
                     key = "IDENTIFY"
                     self.scores[key] += points
+                else:
+                    self.scores["OTHER"] += points
 
                 with open("logs.txt", "a+") as f:
                     f.write(f"some: {some}, last_message: {last_message}, message: {message}, points: {points}\n")
