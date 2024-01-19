@@ -169,8 +169,6 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
 
     def step(self, action):
         obs, rew, terminated, truncated, info = self.env.step(action)
-        if obs is None:
-            return obs, rew, terminated, truncated, info
 
         done = terminated | truncated
 
