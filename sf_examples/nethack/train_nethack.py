@@ -46,6 +46,18 @@ def load_pretrained_checkpoint(model, checkpoint_dir: str, checkpoint_kind: str,
     checkpoints = Learner.get_checkpoints(join(checkpoint_dir, "checkpoint_p0"), f"{name_prefix}_*")
     checkpoint_dict = Learner.load_checkpoint(checkpoints, "cpu")
 
+    student_params = dict(
+        filter(
+            lambda x: x[0].startswith("student"),
+            checkpoint_dict["model"].items(),
+        )
+    )
+
+    if len(student_params) > 0:
+        # means that the pretrained checkpoint was a KickStarter, we only want to load the student
+        student_params = dict(map(lambda x: (x[0].removeprefix("student."), x[1]), student_params.items()))
+        checkpoint_dict["model"] = student_params
+
     if not normalize_returns:
         del checkpoint_dict["model"]["returns_normalizer.running_mean"]
         del checkpoint_dict["model"]["returns_normalizer.running_var"]
