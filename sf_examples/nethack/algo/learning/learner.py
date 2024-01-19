@@ -706,7 +706,11 @@ class DatasetLearner(Learner):
             self._maybe_load_policy()
 
         with self.timing.add_time("prepare_batch"):
-            buff, experience_size, num_invalids = self._prepare_batch(batch)
+            if self.env_steps >= self.cfg.skip_train:
+                buff, experience_size, num_invalids = self._prepare_batch(batch)
+            else:
+                experience_size = batch["dones"].shape[0] * batch["dones"].shape[1]
+                num_invalids = 0
 
         if num_invalids >= experience_size:
             if self.cfg.with_pbt:
@@ -716,12 +720,15 @@ class DatasetLearner(Learner):
             return None
         else:
             with self.timing.add_time("train"):
-                train_stats = self._train(
-                    buff,
-                    self.cfg.batch_size,
-                    experience_size,
-                    num_invalids,
-                )
+                if self.env_steps >= self.cfg.skip_train:
+                    train_stats = self._train(
+                        buff,
+                        self.cfg.batch_size,
+                        experience_size,
+                        num_invalids,
+                    )
+                else:
+                    train_stats = None
 
             # multiply the number of samples by frameskip so that FPS metrics reflect the number
             # of environment steps actually simulated
