@@ -531,6 +531,7 @@ def add_rl_args(p: ArgumentParser):
 
     # debugging options
     p.add_argument("--benchmark", default=False, type=str2bool, help="Benchmark mode")
+    p.add_argument("--clip_advantages", type=str2bool, default=False)
 
 
 def add_model_args(p: ArgumentParser):
