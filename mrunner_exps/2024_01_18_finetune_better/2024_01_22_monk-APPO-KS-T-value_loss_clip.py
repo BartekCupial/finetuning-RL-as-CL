@@ -43,8 +43,9 @@ config = {
 params_grid = [
     {
         "seed": list(range(1)),
-        "learning_rate": [0.0001, 0.00001],
+        "learning_rate": [0.0001],
         "freeze": [{"encoder": 0}],
+        "value_loss_clip": [0.5, 1.0, 2.0, 4.0],
     },
 ]
 
