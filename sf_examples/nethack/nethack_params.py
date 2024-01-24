@@ -16,7 +16,7 @@ def add_extra_params_nethack_env(parser):
     p.add_argument("--fn_penalty_step", type=str, default="constant")
     p.add_argument("--savedir", type=str, default=None)
     p.add_argument("--save_ttyrec_every", type=int, default=0)
-    p.add_argument("--gameloaddir", type=str, default=None)
+    p.add_argument("--gameloaddir", type=ast.literal_eval, default=None)
     p.add_argument("--state_counter", type=str, default=None)
     p.add_argument("--add_image_observation", type=str2bool, default=True)
     p.add_argument("--crop_dim", type=int, default=18)
