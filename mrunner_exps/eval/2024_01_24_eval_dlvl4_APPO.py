@@ -4,8 +4,7 @@ from mrunner.helpers.specification_helper import create_experiments_helper
 
 from sf_examples.nethack.utils.paramiko import get_save_paths
 
-# name = globals()["script"][:-3]
-name = "local"
+name = globals()["script"][:-3]
 
 # params for all exps
 config = {
@@ -29,12 +28,12 @@ csv_folder_name = f"{config['character']}_episodes{config['sample_env_episodes']
 
 save_root_path = Path("/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir")
 
-# expected_saves = 128
-# folder = "saves4"
-# saves = get_save_paths(save_root_path / folder)
-# if len(saves) < expected_saves:
-#     saves = saves * ((expected_saves // len(saves)) + 1)
-# saves = [save_root_path / folder / s for e, s in enumerate(saves) if e < expected_saves]
+expected_saves = 128
+folder = "saves4"
+saves = get_save_paths(save_root_path / folder)
+if len(saves) < expected_saves:
+    saves = saves * ((expected_saves // len(saves)) + 1)
+saves = [save_root_path / folder / s for e, s in enumerate(saves) if e < expected_saves]
 
 # params different between exps
 params_grid = [
@@ -49,138 +48,7 @@ params_grid = [
             "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_exp/23_01-10_36-laughing_ride/2024-01-23-monk-appo-baseline_9a5l_8/train_dir",
         ],
         "experiment": ["default_experiment"],
-        "gameloaddir": [
-            [
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aadzctpiyfju",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aalhhrbnveyh",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aarnftwfkurv",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aatocovcofqn",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aavmzxkdncmb",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aavpeluxalit",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/abanlgsphvle",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aclizcwqbnll",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/adbagzznjjhr",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/adevdhpgcujp",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/adhtkvqjxgwi",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/adjtajwoacec",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aeccvmgudguh",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aeeqocfhthon",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aepoexuguqkv",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aetavtvhmxuq",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aeuckuxljjtv",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aeuqsnwpfwft",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/afcvcisrattz",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/afdeppnrjvqw",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/afszgdoujwyv",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aftixrsulueu",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/agdiisgrkhks",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/agiosqznfioa",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/agkjtqkrcrkm",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/agkqcalumycd",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/agmhqfkoyuqk",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/agmlcynoppkt",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/agmsweqrxkhh",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/agnfjjehlzjy",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/agvroamuoisl",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/agwnqiapjnus",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ahawzkzjcvzw",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aihevnijdbsa",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ainbziihawji",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/airczdclicqm",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aitqrcibgrzl",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aiunkgnuyrbd",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aivgvlfhoaxg",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ajdarjteltba",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ajgaqhkqxthc",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ajgzxvyuvcoe",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ajianjdokqik",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ajkrmadaggxf",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ajmtpudllljg",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ajnqipsdxtrp",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ajwgylqbwnug",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ajyadxyfbmij",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ajzjboblqjlw",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/akmykrdscjct",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aknwoqzirhtn",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/akoqdapiyeto",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/akteqapsryzk",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/akzfoxoynnwo",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/albfintdsryu",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/albjzqymvzub",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aljloxssbgct",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/alknkkprdhqf",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/almuwtormcvn",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ambjddhhlasa",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/amdkgdtzftbp",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ammxwulhsyix",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/amondizenfey",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/amsdlwvubeoj",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/amwbeaarveix",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/anjorcfqarwg",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/anwqphtvmtnb",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/apcynzmvwduh",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/apuiborvymce",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/apzbaetiyons",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/apzswndxwqzh",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aqgzqivjjinf",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aqnlqztgjtea",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aqnshyafewsn",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/arrkjrwllzqx",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/asknvifgwuns",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/assqgjbhhezg",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/astnenvlueul",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/atbzrgiplrke",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/atenovvszbsb",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/atvnwqgjnzqf",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/atvxctzaessh",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/atzadmchbops",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aubmzmqfgcsr",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aucsoabuymhg",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aumtijctbdiu",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aumuzqvqmasg",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/auqhhvvkwmvx",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aurhtgnkculf",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ausxuxdmtjmh",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/auvalirulmzz",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/auvvahrlxbyf",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/auwulfmdtpmu",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/avasixrxpqik",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/avghlnlgcuwq",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/avnboaiaytbs",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/avturnoutmfq",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/awkhlewpfkcb",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/awlrjqxkxbms",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/axbrgykyiohs",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/axtecksnaget",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/axtewyupxvsd",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/axzuhxomsjag",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ayaarskrhewy",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ayrknqibmkqx",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/ayzqgzrsnmlm",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/azadnifngulr",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/azbgtnsbvrmt",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/azcyvvexljov",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/azfvjahsiyvy",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/azkovkmifqyl",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/azlzcbqndgso",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/azmevbmtnmcg",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aznxbbljgaei",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/aztrtioatxhx",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bafrpvissesf",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bapvelapqcfa",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/barhhawdkngs",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bbjgsdjalpsd",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bbkiizfllhpx",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bblfahgovbqz",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bblzluggjosx",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bbmoqnjhdxga",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bbxsdjedzzjd",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bbylyhheahhx",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bcjmcnrsdabk",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bclkuhhzrtwz",
-                "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir/saves4/bcreiodyiykf",
-            ]
-        ],
+        "gameloaddir": [saves],
     },
 ]
 

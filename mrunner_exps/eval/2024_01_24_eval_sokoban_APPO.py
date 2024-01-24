@@ -4,8 +4,7 @@ from mrunner.helpers.specification_helper import create_experiments_helper
 
 from sf_examples.nethack.utils.paramiko import get_save_paths
 
-# name = globals()["script"][:-3]
-name = "local"
+name = globals()["script"][:-3]
 
 # params for all exps
 config = {
