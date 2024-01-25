@@ -9,6 +9,7 @@ config = {
     "exp_tags": [name],
     "character": "mon-hum-neu-mal",
     # "character": "@",
+    "with_wandb": True,
     "use_pretrained_checkpoint": False,
     "load_checkpoint_kind": "latest",
     "train_dir": "/home/bartek/Workspace/ideas/sample-factory/train_dir",

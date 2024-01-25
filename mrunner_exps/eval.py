@@ -28,14 +28,14 @@ params_grid = [
     {
         "seed": list(range(1)),
         "csv_folder_name": [csv_folder_name],
-        "train_dir": [
-            "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_exp/23_01-10_46-infallible_bell/2024-01-23-monk-appo-ks-t-baseline_zeva_5/train_dir",
-            "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_exp/23_01-10_46-infallible_bell/2024-01-23-monk-appo-ks-t-baseline_zeva_6/train_dir",
-            "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_exp/23_01-10_46-infallible_bell/2024-01-23-monk-appo-ks-t-baseline_zeva_7/train_dir",
-            "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_exp/23_01-10_46-infallible_bell/2024-01-23-monk-appo-ks-t-baseline_zeva_8/train_dir",
-            "/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_exp/23_01-10_46-infallible_bell/2024-01-23-monk-appo-ks-t-baseline_zeva_9/train_dir",
+        # "train_dir": ["/raid/NFS_SHARE/results/bartlomiej.cupial/sf_checkpoints/train_dir"],
+        "experiment": [
+            # "@-SP-AA-BC_pretrained",
+            # "amzn-AA-BC_pretrained",
+            # "@-AA-BC_pretrained",
+            # "monk-AA-BC_pretrained",
+            "monk-AA-BC_pretrained_use_prev_action",
         ],
-        "experiment": ["default_experiment"],
     },
 ]
 

@@ -8,10 +8,12 @@ import numpy as np
 import pandas as pd
 from signal_slot.signal_slot import StatusCode
 
+import wandb
 from sample_factory.algo.sampling.evaluation_sampling_api import EvalSamplingAPI
 from sample_factory.algo.utils.env_info import EnvInfo, obtain_env_info_in_a_separate_process
 from sample_factory.utils.typing import Config
 from sample_factory.utils.utils import experiment_dir, log
+from sample_factory.utils.wandb_utils import init_wandb
 
 
 def _print_fps_stats(cfg: Config, fps_stats: Deque):
@@ -27,35 +29,40 @@ def _print_fps_stats(cfg: Config, fps_stats: Deque):
     )
 
 
+def get_summary(eval_stats, policy_id):
+    results = {}
+    for key, stat in eval_stats.items():
+        stat_value = np.mean(stat[policy_id])
+
+        if "/" in key:
+            # custom summaries have their own sections in tensorboard
+            avg_tag = key
+            min_tag = f"{key}_min"
+            max_tag = f"{key}_max"
+        elif key in ("reward", "len"):
+            # reward and length get special treatment
+            avg_tag = f"{key}/{key}"
+            min_tag = f"{key}/{key}_min"
+            max_tag = f"{key}/{key}_max"
+        else:
+            avg_tag = f"policy_stats/avg_{key}"
+            min_tag = f"policy_stats/avg_{key}_min"
+            max_tag = f"policy_stats/avg_{key}_max"
+
+        results[avg_tag] = float(stat_value)
+
+        # for key stats report min/max as well
+        if key in ("reward", "true_objective", "len"):
+            results[min_tag] = float(min(stat[policy_id]))
+            results[max_tag] = float(max(stat[policy_id]))
+
+    return results
+
+
 def _print_eval_summaries(cfg, eval_stats):
     for policy_id in range(cfg.num_policies):
-        results = {}
-        for key, stat in eval_stats.items():
-            stat_value = np.mean(stat[policy_id])
-
-            if "/" in key:
-                # custom summaries have their own sections in tensorboard
-                avg_tag = key
-                min_tag = f"{key}_min"
-                max_tag = f"{key}_max"
-            elif key in ("reward", "len"):
-                # reward and length get special treatment
-                avg_tag = f"{key}/{key}"
-                min_tag = f"{key}/{key}_min"
-                max_tag = f"{key}/{key}_max"
-            else:
-                avg_tag = f"policy_stats/avg_{key}"
-                min_tag = f"policy_stats/avg_{key}_min"
-                max_tag = f"policy_stats/avg_{key}_max"
-
-            results[avg_tag] = float(stat_value)
-
-            # for key stats report min/max as well
-            if key in ("reward", "true_objective", "len"):
-                results[min_tag] = float(min(stat[policy_id]))
-                results[max_tag] = float(max(stat[policy_id]))
-
-        log.info(json.dumps(results, indent=4))
+        summary = get_summary(eval_stats, policy_id)
+        log.info(json.dumps(summary, indent=4))
 
 
 def _save_eval_results(cfg, eval_stats):
@@ -74,10 +81,31 @@ def _save_eval_results(cfg, eval_stats):
         data.to_csv(csv_output_path)
 
 
+def _save_eval_results_to_wandb(cfg, eval_stats, env_steps):
+    if cfg.with_wandb:
+        init_wandb(cfg)
+
+        for policy_id in range(cfg.num_policies):
+            data = {}
+            for key, stat in eval_stats.items():
+                data[key] = stat[policy_id]
+
+            data_df = pd.DataFrame(data)
+
+            for column in data_df.columns:
+                wandb.log({f"{column}_p{policy_id}": wandb.Histogram(data_df[column])})
+
+            summary = get_summary(eval_stats, policy_id)
+            summary["train/env_steps"] = env_steps[policy_id]
+            summary["global_step"] = env_steps[policy_id]
+            wandb.log(summary, step=env_steps[policy_id])
+
+
 def generate_trajectories(cfg: Config, env_info: EnvInfo, sample_env_episodes: int = 1024) -> StatusCode:
     sampler = EvalSamplingAPI(cfg, env_info)
     sampler.init()
     sampler.start()
+    env_steps = {policy_id: learner.env_steps for policy_id, learner in sampler.learners.items()}
 
     print_interval_sec = 1.0
     fps_stats = deque([(time.time(), 0, 0)], maxlen=10)
@@ -103,9 +131,9 @@ def generate_trajectories(cfg: Config, env_info: EnvInfo, sample_env_episodes: i
 
     status = sampler.stop()
 
-    # TODO: log results to tensorboard?
-    _print_eval_summaries(cfg, sampler.eval_stats)
+    _save_eval_results_to_wandb(cfg, sampler.eval_stats, env_steps)
     _save_eval_results(cfg, sampler.eval_stats)
+    _print_eval_summaries(cfg, sampler.eval_stats)
 
     return status
 
