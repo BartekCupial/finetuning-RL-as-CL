@@ -24,8 +24,6 @@ config = {
     "restart_behavior": "overwrite",
 }
 
-csv_folder_name = f"{config['character']}_episodes{config['sample_env_episodes']}"
-
 save_root_path = Path("/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir")
 
 expected_saves = 128
@@ -33,7 +31,9 @@ folder = "saves4"
 saves = get_save_paths(save_root_path / folder)
 if len(saves) < expected_saves:
     saves = saves * ((expected_saves // len(saves)) + 1)
-saves = [save_root_path / folder / s for e, s in enumerate(saves) if e < expected_saves]
+saves = [str(save_root_path / folder / s) for e, s in enumerate(saves) if e < expected_saves]
+
+csv_folder_name = f"{config['character']}_episodes{config['sample_env_episodes']}_{folder}"
 
 # params different between exps
 params_grid = [
