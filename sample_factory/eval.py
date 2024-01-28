@@ -83,17 +83,14 @@ def _save_eval_results(cfg, eval_stats):
 
 def _save_eval_results_to_wandb(cfg, eval_stats, env_steps):
     if cfg.with_wandb:
+        del cfg.wandb_unique_id
         init_wandb(cfg)
 
         for policy_id in range(cfg.num_policies):
             data = {}
             for key, stat in eval_stats.items():
                 data[key] = stat[policy_id]
-
-            data_df = pd.DataFrame(data)
-
-            for column in data_df.columns:
-                wandb.log({f"{column}_p{policy_id}": wandb.Histogram(data_df[column])})
+                wandb.log({f"{key}_p{policy_id}": np.array(data[key])})
 
             summary = get_summary(eval_stats, policy_id)
             summary["train/env_steps"] = env_steps[policy_id]

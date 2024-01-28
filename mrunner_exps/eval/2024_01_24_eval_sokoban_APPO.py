@@ -18,16 +18,16 @@ config = {
     "load_checkpoint_kind": "latest",
     "train_dir": "/home/bartek/Workspace/ideas/sample-factory/train_dir",
     "experiment": "amzn-AA-BC_pretrained",
-    "sample_env_episodes": 128,
+    "sample_env_episodes": 20,
     "num_workers": 16,
-    "num_envs_per_worker": 8,
-    "worker_num_splits": 2,
+    "num_envs_per_worker": 1,
+    "worker_num_splits": 1,
     "restart_behavior": "overwrite",
 }
 
 save_root_path = Path("/net/pr2/projects/plgrid/plgggmum_crl/bcupial/gamesavedir")
 
-expected_saves = 128
+expected_saves = 20
 folder = "sokoban"
 saves = get_save_paths(save_root_path / folder)
 if len(saves) < expected_saves:
