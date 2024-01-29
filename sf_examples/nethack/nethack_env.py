@@ -71,7 +71,7 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
             # if gameloaddir is a list we will pick only one element from this list
             if env_config:
                 # based on env_id
-                idx = len(cfg.gameloaddir) % env_config["env_id"]
+                idx = env_config["env_id"] % len(cfg.gameloaddir)
                 gameloaddir = cfg.gameloaddir[idx]
             else:
                 # if no env_id use first element
