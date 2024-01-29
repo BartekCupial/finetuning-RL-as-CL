@@ -20,12 +20,16 @@ config = {
     "wandb_user": "bartekcupial",
     "wandb_project": "sf2_nethack",
     "wandb_group": "gmum",
-    # "with_wandb": True,
+    "with_wandb": True,
+    "use_pretrained_checkpoint": True,
+    "model_path": "train_dir/amzn-AA-BC_pretrained",
     "use_prev_action": True,
     "model": "ScaledNet",
     "use_resnet": True,
     "rnn_size": 1738,
     "h_dim": 1738,
+    "learning_rate": 0.0001,
+    "freeze": {"encoder": 0},
 }
 
 # params different between exps
@@ -33,12 +37,7 @@ params_grid = [
     {
         "seed": list(range(1)),
         "restart_behavior": ["overwrite"],
-        "use_pretrained_checkpoint": [True],
-        "model_path": ["train_dir/amzn-AA-BC_pretrained"],
-        # "freeze": [{"encoder": 0, "core": 0, "decoder": 0, "action_parameterization": 0}],
-        # "unfreeze": [{"action_parameterization": 50_000_000}],
-        "normalize_returns": [False],
-        "num_batches_per_epoch": [8],
+        "with_wandb": [False],
     },
 ]
 
