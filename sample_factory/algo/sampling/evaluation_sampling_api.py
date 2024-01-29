@@ -359,7 +359,6 @@ class EvalSamplingAPI:
         # just release buffers after every trajectory
         # we could alternatively have more sophisticated logic here, see i.e. batcher.py or sync_sampling_api.py
         self.sampling_loop.yield_trajectory_buffers(traj_buffer_indices, device)
-        self.sampling_loop.event_loop.process_events()
 
     def stop(self) -> StatusCode:
         self.sampling_loop.stop_sampling()
