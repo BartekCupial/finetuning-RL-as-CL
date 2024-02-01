@@ -34,3 +34,10 @@ ssh-add
 # mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/eval/2024_01_31_eval_APPO-T.py
 # mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/eval/2024_01_31_eval_APPO-KS-T.py
 # mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/eval/2024_01_31_eval_APPO-BC-T.py
+
+# mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/eval/2024_02_01_eval_APPO.py
+# mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/eval/2024_02_01_eval_APPO-T.py
+# mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/eval/2024_02_01_eval_APPO-KS-T.py
+# mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/eval/2024_02_01_eval_APPO-BC-T.py
+# mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/eval/2024_02_01_eval_APPO-EWC-T.py
+# mrunner --config ~/.mrunner.yaml --context athena_nethack_big_1gpu run mrunner_exps/eval/2024_02_01_eval_APPO-BCEL-T.py
