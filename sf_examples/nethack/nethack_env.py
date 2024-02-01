@@ -22,6 +22,7 @@ from sf_examples.nethack.utils.wrappers import (
     RenderCharImagesWithNumpyWrapperV2,
     SeedActionSpaceWrapper,
     TaskRewardsInfoWrapper,
+    TtyrecInfoWrapper,
     VariablesInfoWrapper,
 )
 from sf_examples.nethack.utils.wrappers.reward_shaping import GAME_REWARD
@@ -128,6 +129,8 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
     if cfg.add_stats_to_info:
         env = BlstatsInfoWrapper(env)
         env = TaskRewardsInfoWrapper(env)
+        if cfg.save_ttyrec_every != 0:
+            env = TtyrecInfoWrapper(env)
 
     if cfg.reward_shaping:
         env = VariablesInfoWrapper(env)
