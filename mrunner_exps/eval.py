@@ -22,20 +22,16 @@ config = {
 }
 
 csv_folder_name = f"{config['character']}_episodes{config['sample_env_episodes']}"
+train_dir = "train_dir"
+experiment = "monk-AA-BC_pretrained_use_prev_action"
 
 # params different between exps
 params_grid = [
     {
         "seed": list(range(1)),
         "csv_folder_name": [csv_folder_name],
-        # "train_dir": ["/raid/NFS_SHARE/results/bartlomiej.cupial/sf_checkpoints/train_dir"],
-        "experiment": [
-            # "@-SP-AA-BC_pretrained",
-            # "amzn-AA-BC_pretrained",
-            # "@-AA-BC_pretrained",
-            # "monk-AA-BC_pretrained",
-            "monk-AA-BC_pretrained_use_prev_action",
-        ],
+        "save_ttyrec_every": [1],
+        "savedir": [f"{train_dir}/{experiment}/nle_data"],
     },
 ]
 
