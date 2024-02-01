@@ -32,6 +32,9 @@ def _print_fps_stats(cfg: Config, fps_stats: Deque):
 def get_summary(eval_stats, policy_id):
     results = {}
     for key, stat in eval_stats.items():
+        if not isinstance(stat[policy_id][0], (int, float, complex)):
+            continue
+
         stat_value = np.mean(stat[policy_id])
 
         if "/" in key:
@@ -83,7 +86,9 @@ def _save_eval_results(cfg, eval_stats):
 
 def _save_eval_results_to_wandb(cfg, eval_stats, env_steps):
     if cfg.with_wandb:
-        del cfg.wandb_unique_id
+        if "wandb_unique_id" in cfg:
+            del cfg.wandb_unique_id
+
         init_wandb(cfg)
 
         for policy_id in range(cfg.num_policies):
