@@ -90,7 +90,11 @@ def _save_eval_results_to_wandb(cfg, eval_stats, env_steps):
             data = {}
             for key, stat in eval_stats.items():
                 data[key] = stat[policy_id]
-                wandb.log({f"{key}_p{policy_id}": np.array(data[key])})
+                # wandb.log({f"{key}_p{policy_id}": np.array(data[key])})
+
+            data = pd.DataFrame(data)
+            table = wandb.Table(dataframe=data)
+            wandb.log({"table_results": table})
 
             summary = get_summary(eval_stats, policy_id)
             summary["train/env_steps"] = env_steps[policy_id]
