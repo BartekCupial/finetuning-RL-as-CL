@@ -17,7 +17,7 @@ config = {
     "load_checkpoint_kind": "latest",
     "train_dir": "/home/bartek/Workspace/ideas/sample-factory/train_dir",
     "experiment": "amzn-AA-BC_pretrained",
-    "sample_env_episodes": 100,
+    "sample_env_episodes": 500,
     "num_workers": 16,
     "num_envs_per_worker": 1,
     "worker_num_splits": 1,
