@@ -43,7 +43,6 @@ def main():
     eval_csv_path = Path("/home/bartek/mon-hum-neu-mal_episodes100/eval_p0.csv")
     ttyrec_path = Path("/home/bartek/mon-hum-neu-mal_episodes100/nle_data")
     eval_df = pd.read_csv(eval_csv_path)
-    eval_df["ttyrecname"] = eval_df["ttyrec"].apply(lambda x: Path(x).name)
 
     xlogdf = get_xlogdata(ttyrec_path)
 
