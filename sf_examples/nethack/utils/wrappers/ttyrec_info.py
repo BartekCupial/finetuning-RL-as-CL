@@ -1,4 +1,4 @@
-from collections import namedtuple
+from pathlib import Path
 
 import gymnasium as gym
 
@@ -11,6 +11,6 @@ class TtyrecInfoWrapper(gym.Wrapper):
         obs, reward, terminated, truncated, info = super().step(action)
 
         if terminated | truncated:
-            info["episode_extra_stats"]["ttyrec"] = ttyrec
+            info["episode_extra_stats"]["ttyrecname"] = Path(ttyrec).name
 
         return obs, reward, terminated, truncated, info
