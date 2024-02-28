@@ -596,9 +596,10 @@ class DatasetLearner(Learner):
                 if self.env_steps >= self.cfg.warmup:
                     # update the weights
                     with timing.add_time("update"):
-                        # following advice from https://youtu.be/9mS1fIYj1So set grad to None instead of optimizer.zero_grad()
-                        for p in self.actor_critic.parameters():
-                            p.grad = None
+                        if self.train_step % self.cfg.optim_step_every_ith == 0:
+                            # following advice from https://youtu.be/9mS1fIYj1So set grad to None instead of optimizer.zero_grad()
+                            for p in self.actor_critic.parameters():
+                                p.grad = None
 
                         loss.backward()
 
@@ -613,8 +614,9 @@ class DatasetLearner(Learner):
                             actual_lr = self.curr_lr * (experience_size - num_invalids) / experience_size
                         self._apply_lr(actual_lr)
 
-                        with self.param_server.policy_lock:
-                            self.optimizer.step()
+                        if self.train_step % self.cfg.optim_step_every_ith == 0:
+                            with self.param_server.policy_lock:
+                                self.optimizer.step()
 
                         self.cfg.kickstarting_loss_coeff *= self.cfg.kickstarting_loss_decay
                         self.cfg.distillation_loss_coeff *= self.cfg.distillation_loss_decay

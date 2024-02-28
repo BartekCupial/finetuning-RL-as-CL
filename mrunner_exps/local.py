@@ -51,7 +51,6 @@ params_grid = [
         # "serial_mode": [True],
         "with_wandb": [False],
         "restart_behavior": ["overwrite"],
-        "learning_rate": [0.0],
     },
 ]
 

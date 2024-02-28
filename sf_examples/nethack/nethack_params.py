@@ -112,6 +112,8 @@ def add_extra_params_general(parser):
     p.add_argument("--unfreeze", type=ast.literal_eval, default={})
     p.add_argument("--freeze_batch_norm", type=str2bool, default=False)
     p.add_argument("--skip_train", type=int, default=-1)
+    p.add_argument("--target_batch_size", type=int, default=128)
+    p.add_argument("--optim_step_every_ith", type=int, default=1)
 
 
 def nethack_override_defaults(_env, parser):
