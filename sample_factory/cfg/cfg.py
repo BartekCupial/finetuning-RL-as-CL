@@ -305,12 +305,6 @@ def add_rl_args(p: ArgumentParser):
         type=float,
         help="c_hat clipping parameter of the V-trace algorithm. Low values for c_hat can reduce variance of the advantage estimates (similar to GAE lambda < 1)",
     )
-    p.add_argument(
-        "--ema_decay_return",
-        default=None,
-        type=float,
-        help="EMA decay for return",
-    )
 
     # optimization
     p.add_argument(

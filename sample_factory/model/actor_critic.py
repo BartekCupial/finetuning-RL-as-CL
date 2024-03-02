@@ -33,7 +33,7 @@ class ActorCritic(nn.Module, Configurable):
         self.returns_normalizer: Optional[RunningMeanStdInPlace] = None
         if cfg.normalize_returns:
             returns_shape = (1,)  # it's actually a single scalar but we use 1D shape for the normalizer
-            self.returns_normalizer = RunningMeanStdInPlace(returns_shape, ema_decay=self.cfg.ema_decay_return)
+            self.returns_normalizer = RunningMeanStdInPlace(returns_shape)
             # comment this out for debugging (i.e. to be able to step through normalizer code)
             self.returns_normalizer = torch.jit.script(self.returns_normalizer)
 

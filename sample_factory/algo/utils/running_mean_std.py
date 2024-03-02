@@ -19,15 +19,12 @@ _DEFAULT_CLIP = 5.0
 
 # noinspection PyAttributeOutsideInit,NonAsciiCharacters
 class RunningMeanStdInPlace(nn.Module):
-    def __init__(
-        self, input_shape, epsilon=_NORM_EPS, clip=_DEFAULT_CLIP, per_channel=False, norm_only=False, ema_decay=None
-    ):
+    def __init__(self, input_shape, epsilon=_NORM_EPS, clip=_DEFAULT_CLIP, per_channel=False, norm_only=False):
         super().__init__()
         log.debug("RunningMeanStd input shape: %r", input_shape)
         self.input_shape: Final = input_shape
         self.eps: Final[float] = epsilon
         self.clip: Final[float] = clip
-        self.ema_decay: Optional[float] = ema_decay
 
         self.norm_only: Final[bool] = norm_only
         self.per_channel: Final[bool] = per_channel
@@ -63,23 +60,6 @@ class RunningMeanStdInPlace(nn.Module):
         new_var = M2 / tot_count
         return new_mean, new_var, tot_count
 
-    @staticmethod
-    @torch.jit.script
-    def _update_mean_var_count_from_moments_ema(
-        mean: Tensor,
-        var: Tensor,
-        count: Tensor,
-        batch_mean: Tensor,
-        batch_var: Tensor,
-        batch_count: int,
-        ema_decay: float,
-    ):
-        tot_count = count + batch_count
-
-        decay_mean = mean * ema_decay + batch_mean * (1 - ema_decay)
-        decay_var = var * ema_decay + batch_var * (1 - ema_decay)
-        return decay_mean, decay_var, tot_count
-
     def forward(self, x: Tensor, denormalize: bool = False) -> None:
         """Normalizes in-place! This function modifies the input tensor and returns nothing."""
         if self.training and not denormalize:
@@ -91,14 +71,9 @@ class RunningMeanStdInPlace(nn.Module):
             batch_count = x.size()[0]
             μ = x.mean(self.axis)  # along channel axis
             σ2 = x.var(self.axis)
-            if self.ema_decay is not None:
-                self.running_mean[:], self.running_var[:], self.count[:] = self._update_mean_var_count_from_moments_ema(
-                    self.running_mean, self.running_var, self.count, μ, σ2, batch_count, self.ema_decay
-                )
-            else:
-                self.running_mean[:], self.running_var[:], self.count[:] = self._update_mean_var_count_from_moments(
-                    self.running_mean, self.running_var, self.count, μ, σ2, batch_count
-                )
+            self.running_mean[:], self.running_var[:], self.count[:] = self._update_mean_var_count_from_moments(
+                self.running_mean, self.running_var, self.count, μ, σ2, batch_count
+            )
 
         # change shape
         if self.per_channel:
