@@ -1026,10 +1026,7 @@ class Learner(Configurable):
                 # rl_games PPO uses a similar approach, see:
                 # https://github.com/Denys88/rl_games/blob/7b5f9500ee65ae0832a7d8613b019c333ecd932c/rl_games/algos_torch/models.py#L51
                 denormalized_values = buff["values"].clone()  # need to clone since normalizer is in-place
-                if not self.cfg.normalize_returns_constants:
-                    self.actor_critic.returns_normalizer(denormalized_values, denormalize=True)
-                else:
-                    denormalized_values = denormalized_values * (self.cfg.return_std + 1e-6) + self.cfg.return_mean
+                self.actor_critic.returns_normalizer(denormalized_values, denormalize=True)
             else:
                 # values are not normalized in this case, so we can use them as is
                 denormalized_values = buff["values"]
@@ -1073,10 +1070,7 @@ class Learner(Configurable):
 
             # return normalization parameters are only used on the learner, no need to lock the mutex
             if self.cfg.normalize_returns:
-                if not self.cfg.normalize_returns_constants:
-                    self.actor_critic.returns_normalizer(buff["returns"])  # in-place
-                else:
-                    buff["returns"] = (buff["returns"] - self.cfg.return_mean) / (self.cfg.return_std + 1e-6)
+                self.actor_critic.returns_normalizer(buff["returns"])  # in-place
 
             num_invalids = dataset_size - buff["valids"].sum().item()
             if num_invalids > 0:

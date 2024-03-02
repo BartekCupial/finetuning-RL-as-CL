@@ -206,24 +206,6 @@ def add_rl_args(p: ArgumentParser):
         type=str2bool,
         help="Whether to use running mean and standard deviation to normalize discounted returns",
     )
-    p.add_argument(
-        "--normalize_returns_constants",
-        default=False,
-        type=str2bool,
-        help="Whether to use constant mean and standard deviation to normalize discounted returns",
-    )
-    p.add_argument(
-        "--return_mean",
-        default=0.0,
-        type=float,
-        help="If normalize_returns_constants=True, mean of constant returns",
-    )
-    p.add_argument(
-        "--return_std",
-        default=1.0,
-        type=float,
-        help="If normalize_returns_constants=True, std of constant returns",
-    )
 
     # components of the loss function
     p.add_argument(
