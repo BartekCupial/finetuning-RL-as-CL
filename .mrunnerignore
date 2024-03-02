@@ -6,6 +6,7 @@ tests/
 mrunner_exps/
 mrunner_auto/
 nle/
+minihack
 notebooks/
 artifacts/
 
