@@ -460,8 +460,6 @@ class Learner(Configurable):
         value_clipped_loss = (value_clipped - target).pow(2)
         value_loss = torch.max(value_original_loss, value_clipped_loss)
         value_loss = masked_select(value_loss, valids, num_invalids)
-        if self.cfg.value_loss_clip is not None:
-            value_loss = torch.clamp(value_loss, max=self.cfg.value_loss_clip)
         value_loss = value_loss.mean()
 
         value_loss *= self.cfg.value_loss_coeff

@@ -264,12 +264,6 @@ def add_rl_args(p: ArgumentParser):
         help="Maximum absolute change in value estimate until it is clipped. Sensitive to value magnitude",
     )
     p.add_argument(
-        "--value_loss_clip",
-        default=None,
-        type=float,
-        help="Clips value loss if too high.",
-    )
-    p.add_argument(
         "--with_vtrace",
         default=False,
         type=str2bool,
