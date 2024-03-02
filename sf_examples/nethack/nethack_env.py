@@ -16,7 +16,9 @@ from sf_examples.nethack.utils.tasks import (
 )
 from sf_examples.nethack.utils.wrappers import (
     BlstatsInfoWrapper,
+    GymV21CompatibilityV0,
     NetHackRewardShapingWrapper,
+    NLETimeLimit,
     PrevActionWrapper,
     RecordAnsi,
     RenderCharImagesWithNumpyWrapperV2,
@@ -106,6 +108,19 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
         kwargs.update(state_counter=cfg.state_counter)
 
     env = env_class(**kwargs)
+
+    # add TimeLimit.truncated to info
+    env = NLETimeLimit(env)
+
+    # convert gym env to gymnasium one, due to issues with render NLE in reset
+    gymnasium_env = GymV21CompatibilityV0(env=env)
+
+    # preserving potential multi-agent env attributes
+    if hasattr(env, "num_agents"):
+        gymnasium_env.num_agents = env.num_agents
+    if hasattr(env, "is_multiagent"):
+        gymnasium_env.is_multiagent = env.is_multiagent
+    env = gymnasium_env
 
     env = patch_non_gymnasium_env(env)
 
