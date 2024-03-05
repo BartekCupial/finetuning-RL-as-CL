@@ -1,6 +1,7 @@
 import re
 
 import numpy as np
+
 from nle import nethack
 
 
@@ -31,8 +32,8 @@ class GoldScore(Score):
 
 class EatingScore(Score):
     def reward(self, env, last_observation, observation, end_status):
-        old_internal = last_observation[env._internal_index]
-        internal = observation[env._internal_index]
+        old_internal = last_observation[env.unwrapped._internal_index]
+        internal = observation[env.unwrapped._internal_index]
 
         reward = max(0, internal[7] - old_internal[7])
         self.score += reward
@@ -76,7 +77,7 @@ class StaircaseScore(Score):
     """
 
     def reward(self, env, last_observation, observation, end_status):
-        internal = observation[env._internal_index]
+        internal = observation[env.unwrapped._internal_index]
         stairs_down = internal[4]
 
         reward = 1 if stairs_down else 0
@@ -92,7 +93,7 @@ class StaircasePetScore(Score):
     """
 
     def reward(self, env, last_observation, observation, end_status):
-        internal = observation[env._internal_index]
+        internal = observation[env.unwrapped._internal_index]
         stairs_down = internal[4]
 
         reward = 0
