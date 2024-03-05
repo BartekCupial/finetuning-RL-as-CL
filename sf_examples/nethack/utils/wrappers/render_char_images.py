@@ -1,21 +1,15 @@
 """Taken & adapted from Chaos Dwarf in Nethack Challenge Starter Kit:
 https://github.com/Miffyli/nle-sample-factory-baseline
-
-
 MIT License
-
 Copyright (c) 2021 Anssi
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,18 +19,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import os
+import importlib.resources
 from typing import Any, SupportsFloat
 
 import cv2
-import gymnasium as gym
+import gym
 import numpy as np
 import render_utils
 from nle import nethack
 from numba import njit
 from PIL import Image, ImageDraw, ImageFont
 
-SMALL_FONT_PATH = os.path.abspath("sf_examples/nethack/render_utils/Hack-Regular.ttf")
+SMALL_FONT_PATH = str(importlib.resources.files("sf_examples") / "nethack/nethack_render_utils/Hack-Regular.ttf")
 
 # Mapping of 0-15 colors used.
 # Taken from bottom image here. It seems about right
@@ -96,34 +90,37 @@ def _tile_characters_to_image(
 
 def _initialize_char_array(font_size, rescale_font_size):
     """Draw all characters in PIL and cache them in numpy arrays
-
     if rescale_font_size is given, assume it is (width, height)
-
     Returns a np array of (num_chars, num_colors, char_height, char_width, 3)
     """
     font = ImageFont.truetype(SMALL_FONT_PATH, font_size)
     dummy_text = "".join([(chr(i) if chr(i).isprintable() else " ") for i in range(256)])
-    _, _, image_width, image_height = font.getbbox(dummy_text)
-    # Above can not be trusted (or its siblings)....
-    image_width = int(np.ceil(image_width / 256) * 256)
+    bboxes = np.array([font.getbbox(char) for char in dummy_text])
+    image_width = bboxes[:, 2].max()
+    image_height = bboxes[:, 3].max()
 
     char_width = rescale_font_size[0]
     char_height = rescale_font_size[1]
-
     char_array = np.zeros((256, 16, char_height, char_width, 3), dtype=np.uint8)
-    image = Image.new("RGB", (image_width, image_height))
-    image_draw = ImageDraw.Draw(image)
-    for color_index in range(16):
-        image_draw.rectangle((0, 0, image_width, image_height), fill=(0, 0, 0))
-        image_draw.text((0, 0), dummy_text, fill=COLORS[color_index], spacing=0)
 
-        arr = np.array(image).copy()
-        arrs = np.array_split(arr, 256, axis=1)
+    for color_index in range(16):
         for char_index in range(256):
-            char = arrs[char_index]
+            char = dummy_text[char_index]
+
+            image = Image.new("RGB", (image_width, image_height))
+            image_draw = ImageDraw.Draw(image)
+            image_draw.rectangle((0, 0, image_width, image_height), fill=(0, 0, 0))
+
+            _, _, width, height = font.getbbox(char)
+            x = (image_width - width) // 2
+            y = (image_height - height) // 2
+            image_draw.text((x, y), char, font=font, fill=COLORS[color_index])
+
+            arr = np.array(image).copy()
             if rescale_font_size:
-                char = cv2.resize(char, rescale_font_size, interpolation=cv2.INTER_AREA)
-            char_array[char_index, color_index] = char
+                arr = cv2.resize(arr, rescale_font_size, interpolation=cv2.INTER_AREA)
+            char_array[char_index, color_index] = arr
+
     return char_array
 
 
@@ -131,7 +128,6 @@ class RenderCharImagesWithNumpyWrapper(gym.Wrapper):
     """
     Render characters as images, using PIL to render characters like we humans see on screen
     but then some caching and numpy stuff to speed up things.
-
     To speed things up, crop image around the player.
     """
 
@@ -203,14 +199,14 @@ class RenderCharImagesWithNumpyWrapper(gym.Wrapper):
         return obs
 
     def step(self, action):
-        obs, reward, terminated, truncated, info = super().step(action)
+        obs, reward, done, info = self.env.step(action)
         obs = self._render_text_to_image(obs)
-        return obs, reward, terminated, truncated, info
+        return obs, reward, done, info
 
     def reset(self, **kwargs):
-        obs, info = super().reset(**kwargs)
+        obs = self.env.reset(**kwargs)
         obs = self._render_text_to_image(obs)
-        return obs, info
+        return obs
 
 
 class RenderCharImagesWithNumpyWrapperV2(gym.Wrapper):
@@ -224,6 +220,7 @@ class RenderCharImagesWithNumpyWrapperV2(gym.Wrapper):
         font_size=9,
         crop_size=12,
         rescale_font_size=(6, 6),
+        render_font_size=(6, 11),
     ):
         super().__init__(env)
         self.char_array = _initialize_char_array(font_size, rescale_font_size)
@@ -253,6 +250,10 @@ class RenderCharImagesWithNumpyWrapperV2(gym.Wrapper):
         )
         self.observation_space = gym.spaces.Dict(obs_spaces)
 
+        self.render_char_array = _initialize_char_array(font_size, render_font_size)
+        self.render_char_array = self.render_char_array.transpose(0, 1, 4, 2, 3)
+        self.render_char_array = np.ascontiguousarray(self.render_char_array)
+
     def _populate_obs(self, obs):
         screen = np.zeros(self.chw_image_shape, order="C", dtype=np.uint8)
         render_utils.render_crop(
@@ -266,11 +267,43 @@ class RenderCharImagesWithNumpyWrapperV2(gym.Wrapper):
         obs["screen_image"] = screen
 
     def step(self, action: Any) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
-        obs, reward, terminated, truncated, info = super().step(action)
+        obs, reward, done, info = self.env.step(action)
         self._populate_obs(obs)
-        return obs, reward, terminated, truncated, info
+        return obs, reward, done, info
 
     def reset(self, **kwargs):
-        obs, info = super().reset(**kwargs)
+        obs = self.env.reset(**kwargs)
         self._populate_obs(obs)
-        return obs, info
+        return obs
+
+    def render(self, mode="human"):
+        if mode == "rgb_array":
+            if not self.unwrapped.last_observation:
+                return
+
+            # TODO: we don't crop but additionally we could show what model sees
+            obs = self.unwrapped.last_observation
+            tty_chars = obs[self.unwrapped._observation_keys.index("tty_chars")]
+            tty_colors = obs[self.unwrapped._observation_keys.index("tty_colors")]
+
+            chw_image_shape = (
+                3,
+                nethack.nethack.TERMINAL_SHAPE[0] * self.render_char_array.shape[3],
+                nethack.nethack.TERMINAL_SHAPE[1] * self.render_char_array.shape[4],
+            )
+            out_image = np.zeros(chw_image_shape, dtype=np.uint8)
+
+            _tile_characters_to_image(
+                out_image=out_image,
+                chars=tty_chars,
+                colors=tty_colors,
+                output_height_chars=nethack.nethack.TERMINAL_SHAPE[0],
+                output_width_chars=nethack.nethack.TERMINAL_SHAPE[1],
+                char_array=self.render_char_array,
+                offset_h=0,
+                offset_w=0,
+            )
+
+            return out_image
+        else:
+            return self.env.render()

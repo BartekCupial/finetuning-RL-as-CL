@@ -1,7 +1,6 @@
 from sf_examples.nethack.utils.wrappers.blstats_info import BlstatsInfoWrapper
 from sf_examples.nethack.utils.wrappers.gym_compatibility import GymV21CompatibilityV0
-from sf_examples.nethack.utils.wrappers.prev_actions import PrevActionWrapper
-from sf_examples.nethack.utils.wrappers.record_ansi import RecordAnsi
+from sf_examples.nethack.utils.wrappers.prev_actions import PrevActionsWrapper
 from sf_examples.nethack.utils.wrappers.render_char_images import (
     RenderCharImagesWithNumpyWrapper,
     RenderCharImagesWithNumpyWrapperV2,
@@ -15,8 +14,7 @@ from sf_examples.nethack.utils.wrappers.variables_info import VariablesInfoWrapp
 
 __all__ = [
     BlstatsInfoWrapper,
-    PrevActionWrapper,
-    RecordAnsi,
+    PrevActionsWrapper,
     RenderCharImagesWithNumpyWrapperV2,
     RenderCharImagesWithNumpyWrapper,
     SeedActionSpaceWrapper,

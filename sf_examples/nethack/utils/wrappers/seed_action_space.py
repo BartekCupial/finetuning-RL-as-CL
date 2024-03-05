@@ -9,6 +9,6 @@ class SeedActionSpaceWrapper(gym.Wrapper):
     """
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
-        obs, info = super().reset(seed=seed, options=options)
+        obs, info = self.env.reset(seed=seed, options=options)
         self.action_space.seed(seed=seed)
         return obs, info

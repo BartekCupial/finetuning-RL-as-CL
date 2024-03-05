@@ -1,9 +1,7 @@
-import copy
-import operator
 from collections import deque
 from typing import Callable
 
-import gymnasium as gym
+import gym
 
 from sample_factory.algo.utils.misc import EPS
 from sample_factory.envs.env_utils import RewardShapingInterface
@@ -156,7 +154,7 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
         return shaping_reward
 
     def reset(self, **kwargs):
-        obs, info = self.env.reset(**kwargs)
+        obs = self.env.reset(**kwargs)
 
         self.prev_vars = dict()
         self.sokoban_level = None
@@ -165,12 +163,10 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
         self.orig_env_reward = self.total_shaping_reward = 0.0
 
         self.print_once = False
-        return obs, info
+        return obs
 
     def step(self, action):
-        obs, rew, terminated, truncated, info = self.env.step(action)
-
-        done = terminated | truncated
+        obs, rew, done, info = self.env.step(action)
 
         self.orig_env_reward += rew
 
@@ -200,7 +196,7 @@ class NetHackRewardShapingWrapper(gym.Wrapper, RewardShapingInterface):
 
             info["true_objective"] = true_objective
 
-        return obs, rew, terminated, truncated, info
+        return obs, rew, done, info
 
     def close(self):
         self.env.unwrapped.reward_shaping_interface = None

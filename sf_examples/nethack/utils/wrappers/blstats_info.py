@@ -1,6 +1,4 @@
-from collections import namedtuple
-
-import gymnasium as gym
+import gym
 
 from sf_examples.nethack.utils.blstats import BLStats
 
@@ -10,12 +8,12 @@ class BlstatsInfoWrapper(gym.Wrapper):
         # because we will see done=True at the first timestep of the new episode
         # to properly calculate blstats at the end of the episode we need to keep the last_observation around
         last_observation = tuple(a.copy() for a in self.env.unwrapped.last_observation)
-        obs, reward, terminated, truncated, info = super().step(action)
+        obs, reward, done, info = self.env.step(action)
 
-        if terminated | truncated:
+        if done:
             info["episode_extra_stats"] = self.add_more_stats(info, last_observation)
 
-        return obs, reward, terminated, truncated, info
+        return obs, reward, done, info
 
     def add_more_stats(self, info, last_observation):
         extra_stats = info.get("episode_extra_stats", {})

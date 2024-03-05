@@ -4,7 +4,6 @@ from typing import Optional
 from nle.env.tasks import NetHackScore
 
 from sample_factory.algo.utils.gymnasium_utils import patch_non_gymnasium_env
-from sample_factory.utils.utils import videos_dir
 from sf_examples.nethack.utils.tasks import (
     NetHackChallenge,
     NetHackEat,
@@ -19,8 +18,7 @@ from sf_examples.nethack.utils.wrappers import (
     GymV21CompatibilityV0,
     NetHackRewardShapingWrapper,
     NLETimeLimit,
-    PrevActionWrapper,
-    RecordAnsi,
+    PrevActionsWrapper,
     RenderCharImagesWithNumpyWrapperV2,
     SeedActionSpaceWrapper,
     TaskRewardsInfoWrapper,
@@ -112,6 +110,26 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
     # add TimeLimit.truncated to info
     env = NLETimeLimit(env)
 
+    if cfg.add_image_observation:
+        env = RenderCharImagesWithNumpyWrapperV2(
+            env,
+            crop_size=cfg.crop_dim,
+            rescale_font_size=(cfg.pixel_size, cfg.pixel_size),
+        )
+
+    if cfg.use_prev_action:
+        env = PrevActionsWrapper(env)
+
+    if cfg.add_stats_to_info:
+        env = BlstatsInfoWrapper(env)
+        env = TaskRewardsInfoWrapper(env)
+        if cfg.save_ttyrec_every != 0:
+            env = TtyrecInfoWrapper(env)
+
+    if cfg.reward_shaping:
+        env = VariablesInfoWrapper(env)
+        env = NetHackRewardShapingWrapper(env, GAME_REWARD)
+
     # convert gym env to gymnasium one, due to issues with render NLE in reset
     gymnasium_env = GymV21CompatibilityV0(env=env)
 
@@ -130,30 +148,5 @@ def make_nethack_env(env_name, cfg, env_config, render_mode: Optional[str] = Non
     if cfg.serial_mode and cfg.num_workers == 1:
         # full reproducability can only be achieved in serial mode and when there is only 1 worker
         env = SeedActionSpaceWrapper(env)
-
-    if cfg.add_image_observation:
-        env = RenderCharImagesWithNumpyWrapperV2(
-            env,
-            crop_size=cfg.crop_dim,
-            rescale_font_size=(cfg.pixel_size, cfg.pixel_size),
-        )
-
-    if cfg.use_prev_action:
-        env = PrevActionWrapper(env)
-
-    if cfg.add_stats_to_info:
-        env = BlstatsInfoWrapper(env)
-        env = TaskRewardsInfoWrapper(env)
-        if cfg.save_ttyrec_every != 0:
-            env = TtyrecInfoWrapper(env)
-
-    if cfg.reward_shaping:
-        env = VariablesInfoWrapper(env)
-        env = NetHackRewardShapingWrapper(env, GAME_REWARD)
-
-    if env_config:
-        if env_config["env_id"] == 0:
-            if cfg.capture_video:
-                env = RecordAnsi(env, videos_dir(cfg=cfg), episode_trigger=lambda t: t % cfg.capture_video_ith == 0)
 
     return env

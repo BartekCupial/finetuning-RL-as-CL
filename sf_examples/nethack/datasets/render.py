@@ -2,7 +2,7 @@
 This is taken from the original Dungeons&Data implementation.
 """
 
-import os
+import importlib.resources
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Tuple
 
@@ -15,7 +15,7 @@ PIXEL_SIZE = 6
 CROP_SIZE = 18
 FONT_SIZE = 9
 RESCALE_FONT_SIZE = (6, 6)
-SMALL_FONT_PATH = os.path.abspath("sf_examples/nethack/render_utils/Hack-Regular.ttf")
+SMALL_FONT_PATH = str(importlib.resources.files("sf_examples") / "nethack/nethack_render_utils/Hack-Regular.ttf")
 
 # Mapping of 0-15 colors used.
 # Taken from bottom image here. It seems about right

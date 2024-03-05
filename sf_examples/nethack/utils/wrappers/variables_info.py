@@ -1,4 +1,4 @@
-import gymnasium as gym
+import gym
 
 from sf_examples.nethack.utils.blstats import BLStats
 from sf_examples.nethack.utils.score import Score
@@ -46,27 +46,10 @@ class VariablesInfoWrapper(gym.Wrapper):
 
         return blstats_info
 
-    def reset(self, **kwargs):
-        self.score.reset()
-
-        # use tuple and copy to avoid shallow copy (`last_observation` would be the same as `observation`)
-        last_observation = tuple(a.copy() for a in self.env.unwrapped.last_observation)
-        obs, info = super().reset(**kwargs)
-        observation = tuple(a.copy() for a in self.env.unwrapped.last_observation)
-        # we have to set StepStatus here since in NLE there is no info TODO: move it elsewhere
-        end_status = self.env.unwrapped.StepStatus.RUNNING
-        info["end_status"] = end_status
-
-        score_info = self._parse_score(last_observation, observation, end_status)
-        blstats_info = self._parse_blstats(observation)
-        info = {**info, **blstats_info, **score_info}
-
-        return obs, info
-
     def step(self, action):
         # use tuple and copy to avoid shallow copy (`last_observation` would be the same as `observation`)
         last_observation = tuple(a.copy() for a in self.env.unwrapped.last_observation)
-        obs, reward, terminated, truncated, info = super().step(action)
+        obs, reward, done, info = super().step(action)
         observation = tuple(a.copy() for a in self.env.unwrapped.last_observation)
         end_status = info["end_status"]
 
@@ -74,4 +57,4 @@ class VariablesInfoWrapper(gym.Wrapper):
         blstats_info = self._parse_blstats(observation)
         info = {**info, **blstats_info, **score_info}
 
-        return obs, reward, terminated, truncated, info
+        return obs, reward, done, info

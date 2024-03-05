@@ -2,8 +2,8 @@ import sys
 
 import numpy as np
 import torch
-
 from nle import nethack
+
 from sample_factory.algo.utils.env_info import extract_env_info
 from sample_factory.algo.utils.make_env import make_env_func_batched
 from sample_factory.algo.utils.model_sharing import ParameterServer
