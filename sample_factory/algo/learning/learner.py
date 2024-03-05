@@ -903,42 +903,6 @@ class Learner(Configurable):
             value_delta = torch.abs(var.values - var.mb.values)
             value_delta_avg, value_delta_max = value_delta.mean(), value_delta.max()
 
-            # compute value_loss again, to investigate
-            old_values = var.mb.values
-            new_values = var.values
-            target = var.mb.returns
-            clip_value = self.cfg.ppo_clip_value
-
-            value_clipped = old_values + torch.clamp(new_values - old_values, -clip_value, clip_value)
-            value_original_loss = (new_values - target).pow(2)
-            value_clipped_loss = (value_clipped - target).pow(2)
-            value_loss = torch.max(value_original_loss, value_clipped_loss)
-
-            worst_idx = value_loss.argmax()
-
-            stats.debug_target_mean = target.mean()
-            stats.debug_target_max = target.max()
-
-            stats.debug_value_loss_argmax_new = new_values[worst_idx]
-            stats.debug_value_loss_argmax_old = old_values[worst_idx]
-            stats.debug_value_loss_argmax_target = target[worst_idx]
-            stats.debug_value_loss_argmax_old_diff = target[worst_idx] - old_values[worst_idx]
-            stats.debug_value_loss_argmax_new_diff = target[worst_idx] - new_values[worst_idx]
-
-            og_shape = self.cfg.batch_size // self.cfg.rollout, self.cfg.rollout
-            stats.debug_value_loss_rollout_idx = np.unravel_index(worst_idx.cpu(), og_shape)[1]
-            stats.debug_time = var.mb["normalized_obs"]["blstats"][worst_idx].long()[nethack.NLE_BL_TIME]
-
-            stats.debug_value_loss = value_loss.mean()
-            stats.debug_value_loss_max = value_loss.max()
-
-            def convert_to_score(t):
-                return (t * stats.returns_running_std + stats.returns_running_mean) * 100
-
-            stats.debug_value_loss_argmax_target_score = convert_to_score(target[worst_idx])
-            stats.debug_value_loss_argmax_old_diff_score = convert_to_score(target[worst_idx] - old_values[worst_idx])
-            stats.debug_value_loss_argmax_new_diff_score = convert_to_score(target[worst_idx] - new_values[worst_idx])
-
             stats.kl_divergence = var.kl_old_mean
             stats.kl_divergence_max = var.kl_old.max()
             stats.value_delta = value_delta_avg
