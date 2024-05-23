@@ -1,184 +1,131 @@
-[![tests](https://github.com/alex-petrenko/sample-factory/actions/workflows/test-ci.yml/badge.svg?branch=master)](https://github.com/alex-petrenko/sample-factory/actions/workflows/test-ci.yml)
-[![codecov](https://codecov.io/gh/alex-petrenko/sample-factory/branch/master/graph/badge.svg?token=9EHMIU5WYV)](https://codecov.io/gh/alex-petrenko/sample-factory)
-[![pre-commit](https://github.com/alex-petrenko/sample-factory/actions/workflows/pre-commit.yml/badge.svg?branch=master)](https://github.com/alex-petrenko/sample-factory/actions/workflows/pre-commit.yml)
-[![docs](https://github.com/alex-petrenko/sample-factory/actions/workflows/docs.yml/badge.svg)](https://samplefactory.dev)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/alex-petrenko/sample-factory/blob/master/LICENSE)
-[![Downloads](https://pepy.tech/badge/sample-factory)](https://pepy.tech/project/sample-factory)
-[<img src="https://img.shields.io/discord/987232982798598164?label=discord">](https://discord.gg/BCfHWaSMkr)
-<!-- [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/wmFrank/sample-factory/master.svg)](https://results.pre-commit.ci/latest/github/wmFrank/sample-factory/master)-->
-<!-- [![wakatime](https://wakatime.com/badge/github/alex-petrenko/sample-factory.svg)](https://wakatime.com/badge/github/alex-petrenko/sample-factory)-->
+# Fine-tuning Reinforcement Learning Models is Secretly a Forgetting Mitigation Problem
 
-
-# Sample Factory
-
-High-throughput reinforcement learning codebase. Version **2** is out! 🤗
-
-**Resources:**
-
-* **Documentation:** [https://samplefactory.dev](https://samplefactory.dev) 
-
-* **Paper:** https://arxiv.org/abs/2006.11751
-
-* **Citation:** [BibTeX](https://github.com/alex-petrenko/sample-factory#citation)
-
-* **Discord:** [https://discord.gg/BCfHWaSMkr](https://discord.gg/BCfHWaSMkr)
-
-* **Twitter (for updates):** [@petrenko_ai](https://twitter.com/petrenko_ai)
-
-* **Talk (circa 2021):** https://youtu.be/lLG17LKKSZc
-
-### What is Sample Factory?
-
-Sample Factory is one of the fastest RL libraries focused on very efficient synchronous and asynchronous implementations of policy gradients (PPO). 
-
-Sample Factory is thoroughly tested and used by many researchers and practitioners.
-Our implementation is known to reach state-of-the-art (SOTA) performance across a wide range of domains, while minimizing the required training time and hardware requirements.
-Clips below demonstrate ViZDoom, IsaacGym, DMLab-30, Megaverse, Mujoco, and Atari agents trained with Sample Factory:
-
-<p align="middle">
-<img src="https://github.com/alex-petrenko/sf_assets/blob/main/gifs/vizdoom.gif?raw=true" width="360" alt="VizDoom agents traned using Sample Factory 2.0">
-<img src="https://github.com/alex-petrenko/sf_assets/blob/main/gifs/isaac.gif?raw=true" width="360" alt="IsaacGym agents traned using Sample Factory 2.0">
-<br/>
-<img src="https://github.com/alex-petrenko/sf_assets/blob/main/gifs/dmlab.gif?raw=true" width="380" alt="DMLab-30 agents traned using Sample Factory 2.0">
-<img src="https://github.com/alex-petrenko/sf_assets/blob/main/gifs/megaverse.gif?raw=true" width="340" alt="Megaverse agents traned using Sample Factory 2.0">
-<br/>
-<img src="https://github.com/alex-petrenko/sf_assets/blob/main/gifs/mujoco.gif?raw=true" width="390" alt="Mujoco agents traned using Sample Factory 2.0">
-<img src="https://github.com/alex-petrenko/sf_assets/blob/main/gifs/atari.gif?raw=true" width="330" alt="Atari agents traned using Sample Factory 2.0">
-</p>
-
-**Key features:**
-
-* Highly optimized algorithm [architecture](https://www.samplefactory.dev/06-architecture/overview/) for maximum learning throughput
-* [Synchronous and asynchronous](https://www.samplefactory.dev/07-advanced-topics/sync-async/) training regimes
-* [Serial (single-process) mode](https://www.samplefactory.dev/07-advanced-topics/serial-mode/) for easy debugging
-* Optimal performance in both CPU-based and [GPU-accelerated environments](https://www.samplefactory.dev/09-environment-integrations/isaacgym/)
-* Single- & multi-agent training, self-play, supports [training multiple policies](https://www.samplefactory.dev/07-advanced-topics/multi-policy-training/) at once on one or many GPUs
-* Population-Based Training ([PBT](https://www.samplefactory.dev/07-advanced-topics/multi-policy-training/))
-* Discrete, continuous, hybrid action spaces
-* Vector-based, image-based, dictionary observation spaces
-* Automatically creates a model architecture by parsing action/observation space specification. Supports [custom model architectures](https://www.samplefactory.dev/03-customization/custom-models/)
-* Library is designed to be imported into other projects, [custom environments](https://www.samplefactory.dev/03-customization/custom-environments/) are first-class citizens
-* Detailed [WandB and Tensorboard summaries](https://www.samplefactory.dev/05-monitoring/metrics-reference/), [custom metrics](https://www.samplefactory.dev/05-monitoring/custom-metrics/)
-* [HuggingFace 🤗 integration](https://www.samplefactory.dev/10-huggingface/huggingface/) (upload trained models and metrics to the Hub)
-* [Multiple](https://www.samplefactory.dev/09-environment-integrations/mujoco/) [example](https://www.samplefactory.dev/09-environment-integrations/atari/) [environment](https://www.samplefactory.dev/09-environment-integrations/vizdoom/) [integrations](https://www.samplefactory.dev/09-environment-integrations/dmlab/) with tuned parameters and trained models
-
-This Readme provides only a brief overview of the library.
-Visit full documentation at [https://samplefactory.dev](https://samplefactory.dev) for more details.
+See also our ICML paper https://arxiv.org/abs/2402.02868
 
 ## Installation
+Works in Python 3.10. Higher versions have problems with building NLE.
 
-Just install from PyPI:
-
-```pip install sample-factory```
-
-SF is known to work on Linux and macOS. There is no Windows support at this time.
-Please refer to the [documentation](https://samplefactory.dev) for additional environment-specific installation notes.
-
-### To install with nethack extras
-
-Install NLE dependent packages and cmake
-```
-apt-get install -yq autoconf libtool pkg-config libbz2-dev
-conda install cmake
-conda install -yq pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
-pip install -e sf_examples/nethack/render_utils
-pip install .[nethack]
-``` 
-or if you want to develop 
-```
-pip install -e .[dev,nethack,mrunner]
-``` 
-
-## Quickstart
-
-Use command line to train an agent using one of the existing integrations, e.g. Mujoco (might need to run `pip install sample-factory[mujoco]`):
+To install NetHack, you need nle and its dependencies.
 
 ```bash
-python -m sf_examples.mujoco.train_mujoco --env=mujoco_ant --experiment=Ant --train_dir=./train_dir
+# nle dependencies
+apt-get install build-essential python3-dev python3-pip python3-numpy autoconf libtool pkg-config libbz2-dev
+conda install cmake flex bison lit
+
+# install nle locally and modify it to enable seeding and handle rendering with gymnasium
+git clone https://github.com/facebookresearch/nle.git nle && cd nle \
+&& git checkout v0.9.0 && git submodule init && git submodule update --recursive \
+&& sed '/#define NLE_ALLOW_SEEDING 1/i#define NLE_ALLOW_SEEDING 1' include/nleobs.h -i \
+&& sed '/self\.nethack\.set_initial_seeds = f/d' nle/env/tasks.py -i \
+&& sed '/self\.nethack\.set_current_seeds = f/d' nle/env/tasks.py -i \
+&& sed '/self\.nethack\.get_current_seeds = f/d' nle/env/tasks.py -i \
+&& sed '/def seed(self, core=None, disp=None, reseed=True):/d' nle/env/tasks.py -i \
+&& sed '/raise RuntimeError("NetHackChallenge doesn.t allow seed changes")/d' nle/env/tasks.py -i \
+&& python setup.py install && cd .. 
+
+# install sample factory with nethack extras
+pip install -e .[nethack]
+conda install -c conda-forge pybind11
+pip install -e sf_examples/nethack/nethack_render_utils
 ```
 
-Stop the experiment (Ctrl+C) when the desired performance is reached and then evaluate the agent:
+## Running Experiments
+
+Run NetHack experiments with the scripts in `sf_examples.nethack`.
+The default parameters have been chosen to match [dungeons & data](https://github.com/dungeonsdatasubmission/dungeonsdata-neurips2022) which is based on [nle sample factory baseline](https://github.com/Miffyli/nle-sample-factory-baseline). By moving from D&D to sample factory we've managed to increase the APPO score from 2k to 2.8k.
+
+To train a model in the `nethack_challenge` environment:
+
+```
+python -m sf_examples.nethack.train_nethack \
+    --env=nethack_challenge \
+    --batch_size=4096 \
+    --num_workers=16 \
+    --num_envs_per_worker=32 \
+    --worker_num_splits=2 \
+    --rollout=32 \
+    --character=mon-hum-neu-mal \
+    --model=ChaoticDwarvenGPT5 \
+    --rnn_size=512 \
+    --experiment=nethack_monk
+```
+
+To visualize the training results, use the `enjoy_nethack` script:
+
+```
+python -m sf_examples.nethack.enjoy_nethack --env=nethack_challenge --character=mon-hum-neu-mal --experiment=nethack_monk
+```
+
+Additionally it's possible to use an alternative `fast_eval_nethack` script which is much faster
+
+```
+python -m sf_examples.nethack.fast_eval_nethack --env=nethack_challenge --sample_env_episodes=128 --num_workers=16 --num_envs_per_worker=2 --character=mon-hum-neu-mal --experiment=nethack_monk 
+```
+
+### List of Supported Environments
+
+- nethack_staircase
+- nethack_score
+- nethack_pet
+- nethack_oracle
+- nethack_gold
+- nethack_eat
+- nethack_scout
+- nethack_challenge
+
+### Reproducing Paper Results
+Parameters for final experiments can be found in `mrunner_exps/.icml/2024_01_23_seeds`, in particular our best agent `mrunner_exps/.icml/2024_01_23_seeds/2024_01_25_monk-APPO-KS-T-baseline.py`
 
 ```bash
-python -m sf_examples.mujoco.enjoy_mujoco --env=mujoco_ant --experiment=Ant --train_dir=./train_dir
-
-# Or use an alternative eval script, no rendering but much faster! (use `sample_env_episodes` >= `num_workers` * `num_envs_per_worker`).
-python -m sf_examples.mujoco.fast_eval_mujoco --env=mujoco_ant --experiment=Ant --train_dir=./train_dir --sample_env_episodes=128 --num_workers=16 --num_envs_per_worker=2
+python -m sf_examples.nethack.train_nethack \
+  --env=challenge \
+  --train_for_env_steps=500000000 \
+  --group=monk-APPO-KS-T \
+  --character=mon-hum-neu-mal \
+  --num_workers=16 \
+  --num_envs_per_worker=32 \
+  --worker_num_splits=2 \
+  --rollout=32 \
+  --batch_size=4096 \
+  --async_rl=True \
+  --serial_mode=False \
+  --wandb_user=bartekcupial \
+  --wandb_project=sf2_nethack \
+  --wandb_group=gmum \
+  --with_wandb=True \
+  --use_pretrained_checkpoint=True \
+  --model_path=/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained \
+  --teacher_path=/net/pr2/projects/plgrid/plgggmum_crl/bcupial/sf_checkpoints/amzn-AA-BC_pretrained \
+  --run_teacher_hs=False \
+  --use_prev_action=True \
+  --model=ScaledNet \
+  --use_resnet=True \
+  --learning_rate=0.0001 \
+  --rnn_size=1738 \
+  --h_dim=1738 \
+  --exploration_loss_coeff=0.0 \
+  --gamma=1.0 \
+  --skip_train=25000000 \
+  --lr_schedule=linear_decay \
+  --save_milestones_ith=25000000 \
+  --freeze="{'encoder': 0}" \
+  --kickstarting_loss_decay=0.99998 \
+  --min_kickstarting_loss_coeff=0.33 \
+  --kickstarting_loss_coeff=0.75 
 ```
 
-Do the same in a pixel-based VizDoom environment (might need to run `pip install sample-factory[vizdoom]`, please also see docs for VizDoom-specific instructions):
-
-```bash
-python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --experiment=DoomBasic --train_dir=./train_dir --num_workers=16 --num_envs_per_worker=10 --train_for_env_steps=1000000
-python -m sf_examples.vizdoom.enjoy_vizdoom --env=doom_basic --experiment=DoomBasic --train_dir=./train_dir
-```
-
-Monitor any running or completed experiment with Tensorboard:
-
-```bash
-tensorboard --logdir=./train_dir
-```
-(or see the docs for WandB integration).
-
-To continue from here, copy and modify one of the existing env integrations to train agents in your own custom environment. We provide
-examples for all kinds of supported environments, please refer to the [documentation](https://samplefactory.dev) for more details.
-
-## Acknowledgements
-
-This project would not be possible without amazing contributions from many people. I would like to thank:
-
-* [Vladlen Koltun](https://vladlen.info) for amazing guidance and support, especially in the early stages of the project, for
-helping me solidify the ideas that eventually became this library.
-* My academic advisor [Gaurav Sukhatme](https://viterbi.usc.edu/directory/faculty/Sukhatme/Gaurav) for supporting this project
-over the years of my PhD and for being overall an awesome mentor.
-* [Zhehui Huang](https://zhehui-huang.github.io/) for his contributions to the original ICML submission, his diligent work on
-testing and evaluating the library and for adopting it in his own research.
-* [Edward Beeching](https://edbeeching.github.io/) for his numerous awesome contributions to the codebase, including
-hybrid action distributions, new version of the custom model builder, multiple environment integrations, and also
-for promoting the library through the HuggingFace integration!
-* [Andrew Zhang](https://andrewzhang505.github.io/) and [Ming Wang](https://www.mingwang.me/) for numerous contributions to the codebase and documentation during their HuggingFace internships!
-* [Thomas Wolf](https://thomwolf.io/) and others at HuggingFace for the incredible (and unexpected) support and for the amazing
-work they are doing for the open-source community.
-* [Erik Wijmans](https://wijmans.xyz/) for feedback and insights and for his awesome implementation of RNN backprop using PyTorch's `PackedSequence`, multi-layer RNNs, and other features!
-* [Tushar Kumar](https://www.linkedin.com/in/tushartk/) for contributing to the original paper and for his help
-with the [fast queue implementation](https://github.com/alex-petrenko/faster-fifo).
-* [Costa Huang](https://costa.sh/) for developing CleanRL, for his work on benchmarking RL algorithms, and for awesome feedback
-and insights!
-* [Denys Makoviichuk](https://github.com/Denys88/rl_games) for developing rl_games, a very fast RL library, for inspiration and 
-feedback on numerous features of this library (such as return normalizations, adaptive learning rate, and others).
-* [Eugene Vinitsky](https://eugenevinitsky.github.io/) for adopting this library in his own research and for his valuable feedback.
-* All my labmates at RESL who used Sample Factory in their projects and provided feedback and insights!
-
-Huge thanks to all the people who are not mentioned here for your code contributions, PRs, issues, and questions!
-This project would not be possible without a community!
+Wandb Report https://api.wandb.ai/links/bartekcupial/zo8agr4p
 
 ## Citation
 
-If you use this repository in your work or otherwise wish to cite it, please make reference to our ICML2020 paper.
+If you use this repository in your work or otherwise wish to cite it, please make reference to our ICML2024 paper.
 
 ```
-@inproceedings{petrenko2020sf,
-  author    = {Aleksei Petrenko and
-               Zhehui Huang and
-               Tushar Kumar and
-               Gaurav S. Sukhatme and
-               Vladlen Koltun},
-  title     = {Sample Factory: Egocentric 3D Control from Pixels at 100000 {FPS}
-               with Asynchronous Reinforcement Learning},
-  booktitle = {Proceedings of the 37th International Conference on Machine Learning,
-               {ICML} 2020, 13-18 July 2020, Virtual Event},
-  series    = {Proceedings of Machine Learning Research},
-  volume    = {119},
-  pages     = {7652--7662},
-  publisher = {{PMLR}},
-  year      = {2020},
-  url       = {http://proceedings.mlr.press/v119/petrenko20a.html},
-  biburl    = {https://dblp.org/rec/conf/icml/PetrenkoHKSK20.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
+@article{wolczyk2024fine,
+  title={Fine-tuning Reinforcement Learning Models is Secretly a Forgetting Mitigation Problem},
+  author={Wo{\l}czyk, Maciej and Cupia{\l}, Bart{\l}omiej and Ostaszewski, Mateusz and Bortkiewicz, Micha{\l} and Zaj{\k{a}}c, Micha{\l} and Pascanu, Razvan and Kuci{\'n}ski, {\L}ukasz and Mi{\l}o{\'s}, Piotr},
+  journal={arXiv preprint arXiv:2402.02868},
+  year={2024}
 }
 ```
 
-For questions, issues, inquiries please join Discord. 
-Github issues and pull requests are welcome! Check out the [contribution guidelines](https://www.samplefactory.dev/community/contribution/).
